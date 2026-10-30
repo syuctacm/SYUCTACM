@@ -1,115 +1,98 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
-import { ChevronDown, ClipboardList, ExternalLink, FileText, LogIn, LogOut, ShieldCheck, User as UserIcon } from 'lucide-react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import type { User } from '../types'
 
 interface SiteHeaderProps {
   user: User | null
   onOpenAuth: () => void
   onLogout: () => void
-  onNavigateArticles: (category?: string) => void
 }
 
-export function SiteHeader({
-  user,
-  onOpenAuth,
-  onLogout,
-  onNavigateArticles,
-}: SiteHeaderProps) {
-  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `transition-colors hover:text-[#0f766e] hover:no-underline ${
-      isActive ? 'text-[#0f766e] font-semibold' : 'text-gray-800'
-    }`
+const NAV_ITEMS = [
+  { label: 'Wiki', to: '/wiki', icon: 'fa-star' },
+  { label: 'News', to: '/news', icon: 'fa-newspaper' },
+] as const
+
+export function SiteHeader({ user, onOpenAuth, onLogout }: SiteHeaderProps) {
+  const { pathname } = useLocation()
+  const overlay = pathname === '/' || pathname === '/news'
+
+  const linkClass = ({ isActive }: { isActive: boolean }) =>
+    `lug-menu__link${isActive ? ' is-active' : ''}`
 
   return (
-    <header className="border-b border-[#e5e7eb] bg-white">
-      <div className="max-w-[880px] mx-auto px-5 h-[60px] flex items-center justify-between">
-        {/* Brand */}
-        <Link to="/" className="flex items-center gap-2.5 hover:no-underline">
-          <img src="/logo.png" alt="SYUCT ACM Logo" className="w-[34px] h-[34px] object-contain" />
-          <span className="font-bold text-base text-gray-800 leading-tight">
-            SYUCT ACM
-            <small className="block text-[11px] font-normal text-gray-500">
-              沈阳化工大学 ACM-ICPC 集训队
-            </small>
-          </span>
-        </Link>
+    <header className={`lug-masthead${overlay ? ' lug-masthead--overlay' : ''}`}>
+      <div className="lug-masthead__inner">
+        <nav className="lug-masthead__nav" aria-label="Primary navigation">
+          <Link to="/" className="lug-brand" aria-label="ACM @ SYUCT 首页">
+            <img src="/logo.png" alt="ACM @ SYUCT" />
+            <span className="lug-brand__title">ACM @ SYUCT</span>
+          </Link>
 
-        {/* Navigation */}
-        <nav className="hidden md:flex items-center gap-5 text-sm">
-          <NavLink to="/" end className={navLinkClass}>
-            首页
-          </NavLink>
-          <button
-            onClick={() => onNavigateArticles()}
-            className="text-gray-800 hover:text-[#0f766e] transition-colors cursor-pointer text-sm"
-          >
-            最新文章
-          </button>
-          <button
-            onClick={() => onNavigateArticles('senior')}
-            className="text-gray-800 hover:text-[#0f766e] transition-colors cursor-pointer text-sm"
-          >
-            薪火相传
-          </button>
-          <NavLink to="/wiki" className={navLinkClass}>
-            Wiki
-          </NavLink>
-          <NavLink to="/surveys" className={navLinkClass}>
-            问卷
-          </NavLink>
-          <a
-            href="https://oj.syuctacm.cn"
-            target="_blank"
-            rel="noreferrer"
-            className="text-gray-800 hover:text-[#0f766e] transition-colors flex items-center gap-1"
-          >
-            训练 OJ
-            <ExternalLink className="w-3 h-3 text-gray-500" />
-          </a>
+          <ul className="lug-menu">
+            {NAV_ITEMS.map((item) => (
+              <li className="lug-menu__item" key={item.label}>
+                <NavLink to={item.to} className={linkClass}>
+                  <i className={`fad ${item.icon} fa-fw`} aria-hidden="true" />
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
+            <li className="lug-menu__item">
+              <a
+                className="lug-menu__link"
+                href="https://github.com/syuctacm"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <i className="fab fa-github fa-fw" aria-hidden="true" />
+                Github
+              </a>
+            </li>
+            <li className="lug-menu__item">
+              <a
+                className="lug-menu__link"
+                href="https://oj.syuctacm.cn"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <i className="fad fa-server fa-fw" aria-hidden="true" />
+                OJ
+              </a>
+            </li>
+          </ul>
+
+          <div className="lug-user">
+            {user ? (
+              <UserMenu user={user} onLogout={onLogout} />
+            ) : (
+              <button
+                type="button"
+                className="lug-user__button"
+                onClick={onOpenAuth}
+                aria-label="登录或注册"
+                title="登录 / 注册"
+              >
+                <i className="fad fa-right-to-bracket fa-fw" aria-hidden="true" />
+              </button>
+            )}
+          </div>
         </nav>
-
-        {/* User Area */}
-        <div className="flex items-center gap-3">
-          {user ? (
-            <UserMenu user={user} onLogout={onLogout} />
-          ) : (
-            <button
-              onClick={onOpenAuth}
-              className="flex items-center gap-1.5 px-3.5 py-1 rounded border border-[#0f766e] text-[13px] text-[#0f766e] hover:bg-[#0f766e] hover:text-white transition-colors cursor-pointer"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              登录 / 注册
-            </button>
-          )}
-        </div>
       </div>
 
-      {/* Mobile Nav */}
-      <div className="md:hidden border-t border-[#e5e7eb]">
-        <div className="max-w-[880px] mx-auto px-5 py-2 flex items-center gap-4 text-[13px] overflow-x-auto">
-          <NavLink to="/" end className={navLinkClass}>
-            首页
-          </NavLink>
-          <button onClick={() => onNavigateArticles()} className="text-gray-800 whitespace-nowrap">
-            最新文章
-          </button>
-          <button onClick={() => onNavigateArticles('senior')} className="text-gray-800 whitespace-nowrap">
-            薪火相传
-          </button>
-          <NavLink to="/wiki" className={navLinkClass}>
-            Wiki
-          </NavLink>
-          <NavLink to="/surveys" className={navLinkClass}>
-            问卷
-          </NavLink>
-          <a
-            href="https://oj.syuctacm.cn"
-            target="_blank"
-            rel="noreferrer"
-            className="text-gray-800 hover:text-[#0f766e] whitespace-nowrap"
-          >
-            训练 OJ
+      <div className="lug-mobile-nav">
+        <div className="lug-mobile-nav__inner">
+          {NAV_ITEMS.map((item) => (
+            <NavLink to={item.to} className={linkClass} key={item.label}>
+              <i className={`fad ${item.icon} fa-fw`} aria-hidden="true" />
+              {item.label}
+            </NavLink>
+          ))}
+          <a href="https://github.com/syuctacm" target="_blank" rel="noreferrer">
+            <i className="fab fa-github fa-fw" aria-hidden="true" /> Github
+          </a>
+          <a href="https://oj.syuctacm.cn" target="_blank" rel="noreferrer">
+            <i className="fad fa-server fa-fw" aria-hidden="true" /> OJ
           </a>
         </div>
       </div>
@@ -126,13 +109,10 @@ function UserMenu({ user, onLogout }: UserMenuProps) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  // 点击外部或 Esc 关闭
   useEffect(() => {
     if (!open) return
     const onPointerDown = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false)
     }
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
@@ -145,65 +125,43 @@ function UserMenu({ user, onLogout }: UserMenuProps) {
     }
   }, [open])
 
-  const itemClass =
-    'flex items-center gap-2 px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 hover:text-[#0f766e] hover:no-underline transition-colors'
-
   return (
-    <div className="relative" ref={menuRef}>
+    <div ref={menuRef}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        type="button"
+        className="lug-user__button"
         aria-expanded={open}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-gray-200 hover:border-[#0f766e] text-xs text-gray-700 transition-colors cursor-pointer"
+        onClick={() => setOpen((v) => !v)}
       >
-        {user.role === 'admin' ? (
-          <ShieldCheck className="w-4 h-4 text-[#0f766e]" />
-        ) : (
-          <UserIcon className="w-4 h-4 text-gray-500" />
-        )}
-        <span className="font-medium max-w-[120px] truncate">
-          {user.nickname || user.username}
-        </span>
-        {user.role === 'admin' && (
-          <span className="px-1 rounded text-[10px] border border-[#0f766e] text-[#0f766e]">
-            管理员
-          </span>
-        )}
-        <ChevronDown
-          className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+        <i
+          className={`fad ${user.role === 'admin' ? 'fa-user-shield' : 'fa-user'} fa-fw`}
+          aria-hidden="true"
         />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 w-44 rounded-md border border-[#e5e7eb] bg-white shadow-lg py-1 z-50">
+        <div className="lug-user__dropdown">
           {user.role === 'admin' && (
             <>
-              <Link
-                to="/admin/articles"
-                onClick={() => setOpen(false)}
-                className={itemClass}
-              >
-                <FileText className="w-3.5 h-3.5" />
+              <Link to="/admin/articles" onClick={() => setOpen(false)}>
+                <i className="fad fa-file-lines fa-fw" aria-hidden="true" />
                 文章管理
               </Link>
-              <Link
-                to="/admin/surveys"
-                onClick={() => setOpen(false)}
-                className={itemClass}
-              >
-                <ClipboardList className="w-3.5 h-3.5" />
+              <Link to="/admin/surveys" onClick={() => setOpen(false)}>
+                <i className="fad fa-clipboard-list fa-fw" aria-hidden="true" />
                 问卷管理
               </Link>
-              <div className="my-1 border-t border-[#e5e7eb]" />
+              <div className="divider" />
             </>
           )}
           <button
+            type="button"
             onClick={() => {
               setOpen(false)
               onLogout()
             }}
-            className={`${itemClass} w-full text-left cursor-pointer`}
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <i className="fad fa-right-from-bracket fa-fw" aria-hidden="true" />
             退出登录
           </button>
         </div>

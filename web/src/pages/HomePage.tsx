@@ -1,53 +1,31 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { CloudSun } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { fetchArticles, fetchWeather } from '../api/client'
-import { ArticleCarousel } from '../components/ArticleCarousel'
-import { CATEGORY_FILTER_OPTIONS as CATEGORIES, CATEGORY_LABELS } from '../lib/categories'
-import { formatDate } from '../lib/format'
+import { LugHero } from '../components/LugHero'
+import { formatChineseDate } from '../lib/format'
 import type { Article } from '../types'
 
-const FALLBACK_WEATHER = '当前天气：沈阳 16.5°C 多云'
+const FALLBACK_WEATHER = '当前天气：沈阳铁西 16.5°C 多云'
 
-interface ArticlesLocationState {
-  category?: string
-  scrollToArticles?: boolean
+interface HomePageProps {
+  onOpenCalendar: () => void
+  onOpenLinks: () => void
 }
 
-export function HomePage() {
-  const location = useLocation()
-  const [category, setCategory] = useState<string>(
-    () => (location.state as ArticlesLocationState | null)?.category ?? ''
-  )
-  const [prevLocationState, setPrevLocationState] = useState(location.state)
-
-  // React 文档推荐的「渲染期间调整 state」模式：响应导航 location.state 变化
-  if (location.state !== prevLocationState) {
-    setPrevLocationState(location.state)
-    const state = location.state as ArticlesLocationState | null
-    if (state?.category !== undefined) {
-      setCategory(state.category)
-    }
-  }
-
+export function HomePage({ onOpenCalendar, onOpenLinks }: HomePageProps) {
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [weatherText, setWeatherText] = useState(FALLBACK_WEATHER)
 
-  // 拉取真实天气（沈阳市铁西区），失败保持静态兜底文案
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
-      try {
-        const w = await fetchWeather()
+    fetchWeather()
+      .then((w) => {
         if (!cancelled) {
           setWeatherText(`当前天气：沈阳铁西 ${w.temperature.toFixed(1)}°C ${w.text}`)
         }
-      } catch {
-        // 天气服务不可用时保留兜底文案，不影响页面
-      }
-    })()
+      })
+      .catch(() => undefined)
     return () => {
       cancelled = true
     }
@@ -55,133 +33,132 @@ export function HomePage() {
 
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetchArticles({ category: category || undefined })
-        if (!cancelled) {
-          setArticles(res.items ?? [])
-          setError('')
-          setLoading(false)
-        }
-      } catch {
-        if (!cancelled) {
-          setError('文章列表加载失败，请稍后重试')
-          setLoading(false)
-        }
-      }
-    })()
+    fetchArticles()
+      .then((res) => {
+        if (!cancelled) setArticles((res.items ?? []).slice(0, 5))
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
     return () => {
       cancelled = true
     }
-  }, [category])
-
-  // 「最新文章 / 薪火相传」导航跳转后滚动到文章区块
-  useEffect(() => {
-    const state = location.state as ArticlesLocationState | null
-    if (state?.scrollToArticles) {
-      requestAnimationFrame(() => {
-        document.getElementById('articles')?.scrollIntoView({ behavior: 'smooth' })
-      })
-    }
-  }, [location.state])
+  }, [])
 
   return (
-    <div className="py-7">
-      {/* 文章图库轮播（无含图文章时显示艺术字占位） */}
-      <div className="mb-6">
-        <ArticleCarousel articles={articles} />
+    <div className="lug-page">
+      <LugHero
+        title="ACM @ SYUCT"
+        lead="沈阳化工大学 ACM-ICPC 集训队"
+        actionLabel="了解更多"
+        actionTo="/wiki"
+      />
+
+      <div className="lug-service-wrap">
+        <nav className="lug-service-hub" aria-label="社团服务导航">
+          <div className="lug-service-hub__side">
+            <div className="lug-service-grid">
+              <a
+                className="lug-service-tile lug-service-tile--tint-red"
+                href="https://oj.syuctacm.cn"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <i className="fad fa-terminal fa-fw" aria-hidden="true" />
+                <span>Hydro OJ</span>
+              </a>
+              <a
+                className="lug-service-tile lug-service-tile--tint-green"
+                href="https://oj.syuctacm.cn/p"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <i className="fad fa-tags fa-fw" aria-hidden="true" />
+                <span>题目标签榜</span>
+              </a>
+              <Link className="lug-service-tile lug-service-tile--tint-blue" to="/news?category=senior">
+                <i className="fad fa-book-open fa-fw" aria-hidden="true" />
+                <span>薪火相传</span>
+              </Link>
+              <Link className="lug-service-tile lug-service-tile--tint-yellow" to="/news?category=contest">
+                <i className="fad fa-graduation-cap fa-fw" aria-hidden="true" />
+                <span>历届选拔赛</span>
+              </Link>
+            </div>
+          </div>
+
+          <div className="lug-service-hub__middle">
+            <p>
+              沈阳化工大学 ACM-ICPC 集训队是由全校程序设计与算法竞赛爱好者自发组织、教练组统一指导的竞技团队，
+              旨在联合全校计算机与数学爱好者，搭建思维与代码交流共享的平台，宣传算法之美，
+              选拔培育代表学校出战 ICPC、CCPC 及各省高校程序设计大赛的优秀梯队。
+            </p>
+            <p className="weather">
+              {weatherText}
+              <i className="fas fa-cloud-sun fa-fw" aria-hidden="true" style={{ marginLeft: 4 }} />
+            </p>
+          </div>
+
+          <div className="lug-service-hub__side">
+            <div className="lug-service-grid">
+              <button
+                type="button"
+                className="lug-service-tile lug-service-tile--fg-red"
+                onClick={onOpenCalendar}
+              >
+                <i className="fad fa-calendar-alt fa-fw" aria-hidden="true" />
+                <span>活动日历</span>
+              </button>
+              <a className="lug-service-tile lug-service-tile--fg-green" href="mailto:noreply@mail.syuctacm.cn">
+                <i className="fad fa-comments fa-fw" aria-hidden="true" />
+                <span>联系我们</span>
+              </a>
+              <Link className="lug-service-tile lug-service-tile--fg-blue" to="/wiki">
+                <i className="fad fa-thumbs-up fa-fw" aria-hidden="true" />
+                <span>更多服务</span>
+              </Link>
+              <button
+                type="button"
+                className="lug-service-tile lug-service-tile--fg-yellow"
+                onClick={onOpenLinks}
+              >
+                <i className="fad fa-link fa-fw" aria-hidden="true" />
+                <span>友情链接</span>
+              </button>
+            </div>
+          </div>
+        </nav>
       </div>
 
-      {/* 组织简介 */}
-      <section className="text-justify">
-        <p className="text-[15px] leading-[1.85] text-gray-800">
-          沈阳化工大学 ACM-ICPC 集训队是由全校程序设计与算法竞赛爱好者自发组织、教练组统一指导的竞技团队，旨在联合全校计算机与数学爱好者，搭建思维与代码交流共享的平台，宣传算法之美，选拔培育代表学校出战 ICPC、CCPC
-          及各省高校程序设计大赛的优秀梯队。
-        </p>
-        <p className="mt-2.5 text-[13px] text-gray-500 flex flex-wrap items-center gap-1.5">
-          <CloudSun className="w-3.5 h-3.5" />
-          <span>{weatherText}　|　</span>
-          <a
-            href="https://oj.syuctacm.cn"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[#0f766e] hover:underline"
-          >
-            Hydro OJ 评测系统
-          </a>
-          <span>运行中</span>
-        </p>
-      </section>
-
-      {/* 最新文章 */}
-      <section id="articles" className="scroll-mt-20">
-        <div className="border-b border-[#e5e7eb] mb-1">
-          <h2 className="inline-block text-xl pb-1.5 border-b-2 border-gray-800 font-semibold">
-            最新文章
+      <div className="lug-container">
+        <section id="articles" className="lug-articles">
+          <h2 className="lug-section-title">
+            <Link to="/news">最新文章</Link>
           </h2>
-        </div>
 
-        <div className="flex flex-wrap gap-4 text-[13px] py-2">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c.key}
-              onClick={() => setCategory(c.key)}
-              className={`pb-0.5 border-b-2 transition-colors cursor-pointer ${
-                category === c.key
-                  ? 'text-[#0f766e] font-semibold border-[#0f766e]'
-                  : 'text-gray-500 border-transparent hover:text-[#0f766e]'
-              }`}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="list-none">
           {loading ? (
-            <div className="py-14 text-center text-gray-400 text-sm">正在加载文章列表...</div>
-          ) : error ? (
-            <div className="py-14 text-center text-gray-400 text-sm">{error}</div>
+            <div className="lug-state">正在加载文章列表...</div>
           ) : articles.length === 0 ? (
-            <div className="py-14 text-center text-gray-400 text-sm">暂无该分类的文章</div>
+            <div className="lug-state">暂无文章</div>
           ) : (
-            articles.map((article) => (
-              <article key={article.id} className="py-[18px] border-b border-[#e5e7eb]">
-                <h3 className="text-[17px] font-semibold flex items-start gap-2 flex-wrap">
-                  {article.is_pinned && (
-                    <span className="shrink-0 mt-1 inline-block text-[11px] text-[#0f766e] border border-[#0f766e] rounded px-1.5 py-0">
-                      置顶
-                    </span>
-                  )}
-                  <Link
-                    to={`/article/${article.id}`}
-                    className="text-gray-800 hover:text-[#0f766e] hover:no-underline"
-                  >
-                    {article.title}
-                  </Link>
-                </h3>
-                <div className="text-[12.5px] text-gray-500 mt-1 mb-1.5">
-                  <span>{formatDate(article.created_at)}</span>
-                  <span className="before:content-[' · ']">
-                    {CATEGORY_LABELS[article.category] ?? article.category}
-                  </span>
-                  {article.author_name && (
-                    <span className="before:content-[' · ']">{article.author_name}</span>
-                  )}
-                </div>
-                {article.summary && (
-                  <Link
-                    to={`/article/${article.id}`}
-                    className="text-sm text-gray-600 hover:no-underline hover:text-gray-800"
-                  >
-                    {article.summary}
-                  </Link>
-                )}
-              </article>
-            ))
+            <div className="lug-article-list">
+              {articles.map((article) => (
+                <article className="lug-article" key={article.id}>
+                  <h3 className="lug-article__title">
+                    <Link to={`/article/${article.id}`}>{article.title}</Link>
+                  </h3>
+                  <p className="lug-article__meta">
+                    <i className="far fa-calendar-alt fa-fw" aria-hidden="true" />
+                    <time dateTime={article.created_at}>{formatChineseDate(article.created_at)}</time>
+                  </p>
+                  {article.summary && <p className="lug-article__summary">{article.summary}</p>}
+                </article>
+              ))}
+            </div>
           )}
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   )
 }

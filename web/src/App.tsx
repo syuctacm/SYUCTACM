@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { SiteHeader } from './layout/SiteHeader'
 import { SiteFooter } from './layout/SiteFooter'
 import { HomePage } from './pages/HomePage'
+import { NewsPage } from './pages/NewsPage'
 import { ArticlePage } from './pages/ArticlePage'
 import { WikiListPage } from './pages/WikiListPage'
 import { WikiPageView } from './pages/WikiPageView'
@@ -23,18 +24,17 @@ import type { User } from './types'
 
 function SiteShell() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [user, setUser] = useState<User | null>(null)
-  // 认证就绪标志：fetchMe settle（或无 token）后置 true，守卫须等就绪后再判定
   const [authReady, setAuthReady] = useState(() => getToken() === null)
+  const fullBleed = pathname === '/' || pathname === '/news'
 
-  // Modals state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [isRecruitOpen, setIsRecruitOpen] = useState(false)
   const [isHonorsOpen, setIsHonorsOpen] = useState(false)
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   const [isLinksOpen, setIsLinksOpen] = useState(false)
 
-  // Load user profile if token exists
   useEffect(() => {
     if (!getToken()) return
     let cancelled = false
@@ -51,10 +51,6 @@ function SiteShell() {
     }
   }, [])
 
-  const handleNavigateArticles = (category?: string) => {
-    navigate('/', { state: { category: category ?? '', scrollToArticles: true } })
-  }
-
   const handleLogout = () => {
     clearToken()
     setUser(null)
@@ -62,64 +58,70 @@ function SiteShell() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-gray-800 antialiased">
+    <div className="lug-root flex min-h-screen flex-col">
       <SiteHeader
         user={user}
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
-        onNavigateArticles={handleNavigateArticles}
       />
 
-      <main className="flex-1 w-full">
-        <div className="max-w-[880px] mx-auto px-5">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/article/:id" element={<ArticlePage />} />
-            <Route path="/wiki" element={<WikiListPage user={user} />} />
-            <Route path="/wiki/new" element={<WikiEditPage user={user} authReady={authReady} />} />
-            <Route path="/wiki/:id" element={<WikiPageView user={user} />} />
-            <Route
-              path="/wiki/:id/edit"
-              element={<WikiEditPage user={user} authReady={authReady} />}
-            />
-            <Route path="/wiki/:id/history" element={<WikiHistoryPage user={user} />} />
-            <Route path="/wiki/:id/revisions/:rid" element={<WikiRevisionPage />} />
-            <Route path="/surveys" element={<SurveyListPage />} />
-            <Route path="/surveys/:id" element={<SurveyFillPage authReady={authReady} />} />
-            <Route
-              path="/admin/surveys"
-              element={<AdminSurveyListPage user={user} authReady={authReady} />}
-            />
-            <Route
-              path="/admin/surveys/new"
-              element={<AdminSurveyEditPage user={user} authReady={authReady} />}
-            />
-            <Route
-              path="/admin/surveys/:id"
-              element={<AdminSurveyEditPage user={user} authReady={authReady} />}
-            />
-            <Route
-              path="/admin/surveys/:id/submissions/:sid"
-              element={<AdminSurveySubmissionPage user={user} authReady={authReady} />}
-            />
-            <Route
-              path="/admin/articles"
-              element={<AdminArticleListPage user={user} authReady={authReady} />}
-            />
-            <Route
-              path="/admin/articles/new"
-              element={<AdminArticleEditPage user={user} authReady={authReady} />}
-            />
-            <Route
-              path="/admin/articles/:id/edit"
-              element={<AdminArticleEditPage user={user} authReady={authReady} />}
-            />
-            <Route
-              path="*"
-              element={<HomePage />}
-            />
-          </Routes>
-        </div>
+      <main className={`flex-1 w-full${fullBleed ? '' : ' max-w-[900px] mx-auto px-5'}`}>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <HomePage
+                onOpenCalendar={() => setIsCalendarOpen(true)}
+                onOpenLinks={() => setIsLinksOpen(true)}
+              />
+            }
+          />
+          <Route path="/news" element={<NewsPage />} />
+          <Route path="/article/:id" element={<ArticlePage />} />
+          <Route path="/wiki" element={<WikiListPage user={user} />} />
+          <Route path="/wiki/new" element={<WikiEditPage user={user} authReady={authReady} />} />
+          <Route path="/wiki/:id" element={<WikiPageView user={user} />} />
+          <Route
+            path="/wiki/:id/edit"
+            element={<WikiEditPage user={user} authReady={authReady} />}
+          />
+          <Route path="/wiki/:id/history" element={<WikiHistoryPage user={user} />} />
+          <Route path="/wiki/:id/revisions/:rid" element={<WikiRevisionPage />} />
+          <Route path="/surveys" element={<SurveyListPage />} />
+          <Route path="/surveys/:id" element={<SurveyFillPage authReady={authReady} />} />
+          <Route
+            path="/admin/surveys"
+            element={<AdminSurveyListPage user={user} authReady={authReady} />}
+          />
+          <Route
+            path="/admin/surveys/new"
+            element={<AdminSurveyEditPage user={user} authReady={authReady} />}
+          />
+          <Route
+            path="/admin/surveys/:id"
+            element={<AdminSurveyEditPage user={user} authReady={authReady} />}
+          />
+          <Route
+            path="/admin/surveys/:id/submissions/:sid"
+            element={<AdminSurveySubmissionPage user={user} authReady={authReady} />}
+          />
+          <Route
+            path="/admin/articles"
+            element={<AdminArticleListPage user={user} authReady={authReady} />}
+          />
+          <Route
+            path="/admin/articles/new"
+            element={<AdminArticleEditPage user={user} authReady={authReady} />}
+          />
+          <Route
+            path="/admin/articles/:id/edit"
+            element={<AdminArticleEditPage user={user} authReady={authReady} />}
+          />
+          <Route path="*" element={<HomePage
+            onOpenCalendar={() => setIsCalendarOpen(true)}
+            onOpenLinks={() => setIsLinksOpen(true)}
+          />} />
+        </Routes>
       </main>
 
       <SiteFooter
@@ -128,6 +130,8 @@ function SiteShell() {
         onOpenCalendar={() => setIsCalendarOpen(true)}
         onOpenLinks={() => setIsLinksOpen(true)}
       />
+
+      <img className="lug-watermark" src="/logo.png" alt="" aria-hidden="true" />
 
       <AuthModal
         isOpen={isAuthModalOpen}

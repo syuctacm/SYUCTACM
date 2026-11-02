@@ -60,9 +60,6 @@ function SiteShell() {
     user,
     onOpenAuth: () => setIsAuthModalOpen(true),
     onLogout: handleLogout,
-    onOpenRecruit: () => setIsRecruitOpen(true),
-    onOpenCalendar: () => setIsCalendarOpen(true),
-    onOpenLinks: () => setIsLinksOpen(true),
   }
 
   return (

@@ -62,6 +62,7 @@ const BASE_STYLE = `
   margin:0; font-size:.9em; line-height:1.65; text-align:left;
 }
 .lug-shadow-body .lug-nav--intro-only .description p + p { margin-top:.55em; }
+.lug-shadow-body .lug-nav--intro-only + .archive-group { margin-top:2rem; }
 .lug-shadow-body .lug-user-popover {
   position:absolute; right:0; top:calc(100% + 10px); z-index:40;
   min-width:170px; padding:6px 0; border:1px solid #cfd4d3; border-radius:4px;

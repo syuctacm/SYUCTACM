@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useSearchParams } from 'react-router-dom'
-import { fetchArticles, fetchWeather } from '../api/client'
-import { formatChineseDate } from '../lib/format'
-import type { Article, User } from '../types'
+import { Link } from 'react-router-dom'
+import { fetchWeather } from '../api/client'
+import type { User } from '../types'
 
 type LugPageMode = 'home' | 'news'
 
@@ -12,9 +11,6 @@ interface LugPageProps {
   user: User | null
   onOpenAuth: () => void
   onLogout: () => void
-  onOpenRecruit: () => void
-  onOpenCalendar: () => void
-  onOpenLinks: () => void
 }
 
 const FALLBACK_WEATHER = '当前天气：沈阳铁西 16.5°C 多云'
@@ -47,23 +43,10 @@ const BASE_STYLE = `
 .lug-shadow-body .site-logo img { width:28px; height:28px; object-fit:contain; }
 .lug-shadow-body .lug-user-wrap { position:relative; margin-left:12px; }
 .lug-shadow-body .lug-user-wrap .search__toggle { position:relative; padding:0; border:0; background:transparent; color:inherit; cursor:pointer; }
-.lug-shadow-body .link-group .link-group-row button {
-  flex:1 0 0; display:inline-block; padding:1rem 0; border:0; background:transparent;
-  color:#444; font:inherit; font-size:.8rem; text-align:center; cursor:pointer;
-}
-.lug-shadow-body .link-group .link-group-row button span {
-  display:block; margin-top:.5em; font-size:1.2em;
-}
-@media (min-width:48em) {
-  .lug-shadow-body .link-group .link-group-row button { font-size:1em; }
-}
-.lug-shadow-body #footer .footer__contact button {
-  display:inline; padding:0; border:0; background:transparent; color:inherit;
-  font:inherit; text-align:left; cursor:pointer;
-}
-.lug-shadow-body #footer .footer__contact button .fa-fw { color:inherit !important; }
-.lug-shadow-body #footer .footer__contact button:hover { text-decoration:underline; }
 .lug-shadow-body #footer .footer__logo { margin-left:auto; }
+.lug-shadow-body .lug-nav--intro-only { display:block; }
+.lug-shadow-body .lug-nav--intro-only .nav-right { margin-left:0; }
+.lug-shadow-body .lug-nav--intro-only .description { display:block; margin:1.25em 1.5em; }
 .lug-shadow-body .lug-user-popover {
   position:absolute; right:0; top:calc(100% + 10px); z-index:40;
   min-width:170px; padding:6px 0; border:1px solid #cfd4d3; border-radius:4px;
@@ -76,8 +59,6 @@ const BASE_STYLE = `
 }
 .lug-shadow-body .lug-user-popover a:hover, .lug-shadow-body .lug-user-popover button:hover { background:#f3f6f6; color:#11999e; text-decoration:none; }
 .lug-shadow-body .lug-user-popover .divider { height:1px; margin:5px 0; background:#e5e7eb; }
-.lug-shadow-body .lug-footer-link { color:inherit !important; cursor:pointer; }
-.lug-shadow-body .lug-footer-link:hover { text-decoration:underline; }
 .lug-shadow-body .footer__logo img.lug-footer-logo { opacity:.95; }
 .lug-shadow-body .lug-watermark {
   position:fixed; left:-150px; bottom:-150px; z-index:-1; width:430px; height:430px;
@@ -137,15 +118,9 @@ export function LugPage({
   user,
   onOpenAuth,
   onLogout,
-  onOpenRecruit,
-  onOpenCalendar,
-  onOpenLinks,
 }: LugPageProps) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const [shadowRoot, setShadowRoot] = useState<ShadowRoot | null>(null)
-  const [searchParams] = useSearchParams()
-  const [articles, setArticles] = useState<Article[]>([])
-  const [loading, setLoading] = useState(true)
   const [weatherText, setWeatherText] = useState(FALLBACK_WEATHER)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
@@ -171,26 +146,6 @@ export function LugPage({
     }
   }, [])
 
-  useEffect(() => {
-    let cancelled = false
-    const category = mode === 'news' ? searchParams.get('category') ?? undefined : undefined
-    fetchArticles({ category })
-      .then((res) => {
-        if (!cancelled) {
-          setArticles(mode === 'home' ? (res.items ?? []).slice(0, 5) : (res.items ?? []))
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setArticles([])
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [mode, searchParams])
-
   if (!shadowRoot) {
     return <div ref={attachShadow} className="lug-shadow-host" />
   }
@@ -201,17 +156,12 @@ export function LugPage({
         <LugDocument
           mode={mode}
           user={user}
-          articles={articles}
-          loading={loading}
           weatherText={weatherText}
           userMenuOpen={userMenuOpen}
           onToggleUserMenu={() => setUserMenuOpen((v) => !v)}
           onCloseUserMenu={() => setUserMenuOpen(false)}
           onOpenAuth={onOpenAuth}
           onLogout={onLogout}
-          onOpenRecruit={onOpenRecruit}
-          onOpenCalendar={onOpenCalendar}
-          onOpenLinks={onOpenLinks}
         />,
         shadowRoot,
       )}
@@ -222,33 +172,23 @@ export function LugPage({
 interface LugDocumentProps {
   mode: LugPageMode
   user: User | null
-  articles: Article[]
-  loading: boolean
   weatherText: string
   userMenuOpen: boolean
   onToggleUserMenu: () => void
   onCloseUserMenu: () => void
   onOpenAuth: () => void
   onLogout: () => void
-  onOpenRecruit: () => void
-  onOpenCalendar: () => void
-  onOpenLinks: () => void
 }
 
 function LugDocument({
   mode,
   user,
-  articles,
-  loading,
   weatherText,
   userMenuOpen,
   onToggleUserMenu,
   onCloseUserMenu,
   onOpenAuth,
   onLogout,
-  onOpenRecruit,
-  onOpenCalendar,
-  onOpenLinks,
 }: LugDocumentProps) {
   const isHome = mode === 'home'
 
@@ -366,32 +306,7 @@ function LugDocument({
           <article className="splash" itemScope itemType="https://schema.org/CreativeWork">
             <section className="page__content" itemProp="text">
               {isHome && (
-                <nav className="lug-nav" aria-label="社团服务导航">
-                  <div className="nav-left">
-                    <div className="link-group">
-                      <div className="link-group-row">
-                        <a className="bg-microsoft-red" href="https://oj.syuctacm.cn" target="_blank" rel="noreferrer">
-                          <i aria-hidden="true" className="fad fa-terminal fa-5x" />
-                          <span>Hydro OJ</span>
-                        </a>
-                        <a className="bg-microsoft-green" href="https://oj.syuctacm.cn/p" target="_blank" rel="noreferrer">
-                          <i aria-hidden="true" className="fad fa-tags fa-5x" />
-                          <span>题目标签榜</span>
-                        </a>
-                      </div>
-                      <div className="link-group-row">
-                        <Link className="bg-microsoft-blue" to="/news?category=senior">
-                          <i aria-hidden="true" className="fad fa-book-open fa-5x" />
-                          <span>薪火相传</span>
-                        </Link>
-                        <Link className="bg-microsoft-yellow" to="/news?category=contest">
-                          <i aria-hidden="true" className="fad fa-graduation-cap fa-5x" />
-                          <span>历届选拔赛</span>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-
+                <nav className="lug-nav lug-nav--intro-only" aria-label="集训队简介">
                   <div className="nav-right">
                     <div className="description">
                       <p>
@@ -404,29 +319,6 @@ function LugDocument({
                         <i className="fa-fw fas fa-cloud-sun" aria-hidden="true" />
                       </p>
                     </div>
-
-                    <div className="link-group">
-                      <div className="link-group-row">
-                        <button type="button" className="fg-microsoft-red lug-footer-link" onClick={onOpenCalendar}>
-                          <i aria-hidden="true" className="fad fa-calendar-alt fa-5x" />
-                          <span>活动日历</span>
-                        </button>
-                        <a className="fg-microsoft-green" href="mailto:noreply@mail.syuctacm.cn">
-                          <i aria-hidden="true" className="fad fa-comments fa-5x" />
-                          <span>联系我们</span>
-                        </a>
-                      </div>
-                      <div className="link-group-row">
-                        <Link className="fg-microsoft-blue" to="/wiki">
-                          <i aria-hidden="true" className="fad fa-thumbs-up fa-5x" />
-                          <span>更多服务</span>
-                        </Link>
-                        <button type="button" className="fg-microsoft-yellow lug-footer-link" onClick={onOpenLinks}>
-                          <i aria-hidden="true" className="fad fa-link fa-5x" />
-                          <span>友情链接</span>
-                        </button>
-                      </div>
-                    </div>
                   </div>
                 </nav>
               )}
@@ -436,35 +328,24 @@ function LugDocument({
                   <h3 className="archive__subtitle">
                     <Link to="/news">{isHome ? '最新文章' : '文章列表'}</Link>
                   </h3>
-
-                  {loading ? (
-                    <p className="lug-state-text">正在加载文章...</p>
-                  ) : articles.length === 0 ? (
-                    <p className="lug-state-text">暂无文章</p>
-                  ) : (
-                    articles.map((article) => (
-                      <div className="list__item" key={article.id}>
-                        <article className="archive__item" itemScope itemType="https://schema.org/CreativeWork">
-                          <h2 className="archive__item-title no_toc p-name" itemProp="headline">
-                            <Link className="u-url" to={`/article/${article.id}`} rel="permalink">
-                              {article.title}
-                            </Link>
-                          </h2>
-                          <p className="page__meta">
-                            <span className="page__meta-date">
-                              <i aria-hidden="true" className="far fa-calendar-alt" />
-                              <time dateTime={article.created_at}>{formatChineseDate(article.created_at)}</time>
-                            </span>
-                          </p>
-                          {article.summary && (
-                            <p className="archive__item-excerpt p-summary" itemProp="description">
-                              {article.summary}
-                            </p>
-                          )}
-                        </article>
-                      </div>
-                    ))
-                  )}
+                  <div className="list__item">
+                    <article className="archive__item" itemScope itemType="https://schema.org/CreativeWork">
+                      <h2 className="archive__item-title no_toc p-name" itemProp="headline">
+                        <Link className="u-url" to="/news" rel="permalink">
+                          ACM 集训队新生招新与训练安排
+                        </Link>
+                      </h2>
+                      <p className="page__meta">
+                        <span className="page__meta-date">
+                          <i aria-hidden="true" className="far fa-calendar-alt" />
+                          <time dateTime="2026-10-19">2026 年 10 月 19 日</time>
+                        </span>
+                      </p>
+                      <p className="archive__item-excerpt p-summary" itemProp="description">
+                        这是首页文章列表的示例内容，后续可由后台管理替换。
+                      </p>
+                    </article>
+                  </div>
                 </div>
               </div>
             </section>
@@ -496,21 +377,6 @@ function LugDocument({
                   <li>
                     <a href="mailto:noreply@mail.syuctacm.cn">
                       <i className="fas fa-fw fa-phone-alt" aria-hidden="true" /> 联系我们
-                    </a>
-                  </li>
-                  <li>
-                    <button type="button" className="lug-footer-link" onClick={onOpenRecruit}>
-                      <i className="fad fa-fw fa-user-plus" aria-hidden="true" /> 加入我们
-                    </button>
-                  </li>
-                  <li>
-                    <a href="https://oj.syuctacm.cn" target="_blank" rel="noreferrer">
-                      <i className="fad fa-fw fa-server" aria-hidden="true" /> 训练 OJ
-                    </a>
-                  </li>
-                  <li>
-                    <a href="https://github.com/syuctacm" target="_blank" rel="noreferrer">
-                      <i className="fab fa-fw fa-github" aria-hidden="true" /> 本站仓库
                     </a>
                   </li>
                 </ul>

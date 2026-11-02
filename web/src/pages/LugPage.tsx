@@ -40,13 +40,28 @@ const BASE_STYLE = `
   height:auto; background:transparent !important;
 }
 .lug-shadow-body.layout--splash .masthead__inner-wrap { position:relative; }
+.lug-shadow-body.layout--splash .masthead,
+.lug-shadow-body.layout--splash .masthead .greedy-nav a,
+.lug-shadow-body.layout--splash .masthead .site-title,
+.lug-shadow-body.layout--splash .visible-links a,
+.lug-shadow-body.layout--splash .search__toggle { color:#fff !important; }
 .lug-shadow-body .site-logo img { width:28px; height:28px; object-fit:contain; }
 .lug-shadow-body .lug-user-wrap { position:relative; margin-left:12px; }
 .lug-shadow-body .lug-user-wrap .search__toggle { position:relative; padding:0; border:0; background:transparent; color:inherit; cursor:pointer; }
 .lug-shadow-body #footer .footer__logo { margin-left:auto; }
-.lug-shadow-body .lug-nav--intro-only { display:block; }
-.lug-shadow-body .lug-nav--intro-only .nav-right { margin-left:0; }
-.lug-shadow-body .lug-nav--intro-only .description { display:block; margin:1.25em 1.5em; }
+.lug-shadow-body .lug-nav--intro-only {
+  display:block; max-width:900px; margin:1rem auto 0;
+}
+.lug-shadow-body .lug-nav--intro-only .nav-right {
+  margin-left:0; background:#f3f6f6; border-radius:6px;
+}
+.lug-shadow-body .lug-nav--intro-only .description {
+  display:block; margin:0; padding:1em 1.25em;
+}
+.lug-shadow-body .lug-nav--intro-only .description p {
+  margin:0; font-size:.9em; line-height:1.65; text-align:left;
+}
+.lug-shadow-body .lug-nav--intro-only .description p + p { margin-top:.55em; }
 .lug-shadow-body .lug-user-popover {
   position:absolute; right:0; top:calc(100% + 10px); z-index:40;
   min-width:170px; padding:6px 0; border:1px solid #cfd4d3; border-radius:4px;
@@ -70,7 +85,12 @@ const BASE_STYLE = `
   .lug-shadow-body.layout--splash .masthead {
     position:relative; background:#f3f6f6 !important; color:#40514e;
   }
+  .lug-shadow-body.layout--splash .masthead,
+  .lug-shadow-body.layout--splash .masthead .greedy-nav a,
+  .lug-shadow-body.layout--splash .masthead .site-title,
+  .lug-shadow-body.layout--splash .search__toggle { color:#40514e !important; }
   .lug-shadow-body .visible-links { display:none; }
+  .lug-shadow-body .lug-nav--intro-only { margin-top:.75rem; }
   .lug-shadow-body .lug-user-wrap {
     position:absolute; top:14px; right:16px; margin:0;
   }

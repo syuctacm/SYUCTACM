@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { SiteHeader } from './layout/SiteHeader'
 import { SiteFooter } from './layout/SiteFooter'
-import { HomePage } from './pages/HomePage'
-import { NewsPage } from './pages/NewsPage'
+import { LugPage } from './pages/LugPage'
 import { ArticlePage } from './pages/ArticlePage'
 import { WikiListPage } from './pages/WikiListPage'
 import { WikiPageView } from './pages/WikiPageView'
@@ -27,7 +26,7 @@ function SiteShell() {
   const { pathname } = useLocation()
   const [user, setUser] = useState<User | null>(null)
   const [authReady, setAuthReady] = useState(() => getToken() === null)
-  const fullBleed = pathname === '/' || pathname === '/news'
+  const isLugPage = pathname === '/' || pathname === '/news'
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [isRecruitOpen, setIsRecruitOpen] = useState(false)
@@ -57,26 +56,29 @@ function SiteShell() {
     navigate('/')
   }
 
-  return (
-    <div className="lug-root flex min-h-screen flex-col">
-      <SiteHeader
-        user={user}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
-        onLogout={handleLogout}
-      />
+  const lugPageProps = {
+    user,
+    onOpenAuth: () => setIsAuthModalOpen(true),
+    onLogout: handleLogout,
+    onOpenRecruit: () => setIsRecruitOpen(true),
+    onOpenCalendar: () => setIsCalendarOpen(true),
+    onOpenLinks: () => setIsLinksOpen(true),
+  }
 
-      <main className={`flex-1 w-full${fullBleed ? '' : ' max-w-[900px] mx-auto px-5'}`}>
+  return (
+    <div className={isLugPage ? 'min-h-screen' : 'lug-root flex min-h-screen flex-col'}>
+      {!isLugPage && (
+        <SiteHeader
+          user={user}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onLogout={handleLogout}
+        />
+      )}
+
+      <main className={isLugPage ? 'flex-1 w-full' : 'flex-1 w-full max-w-[900px] mx-auto px-5'}>
         <Routes>
-          <Route
-            path="/"
-            element={
-              <HomePage
-                onOpenCalendar={() => setIsCalendarOpen(true)}
-                onOpenLinks={() => setIsLinksOpen(true)}
-              />
-            }
-          />
-          <Route path="/news" element={<NewsPage />} />
+          <Route path="/" element={<LugPage mode="home" {...lugPageProps} />} />
+          <Route path="/news" element={<LugPage mode="news" {...lugPageProps} />} />
           <Route path="/article/:id" element={<ArticlePage />} />
           <Route path="/wiki" element={<WikiListPage user={user} />} />
           <Route path="/wiki/new" element={<WikiEditPage user={user} authReady={authReady} />} />
@@ -117,21 +119,20 @@ function SiteShell() {
             path="/admin/articles/:id/edit"
             element={<AdminArticleEditPage user={user} authReady={authReady} />}
           />
-          <Route path="*" element={<HomePage
-            onOpenCalendar={() => setIsCalendarOpen(true)}
-            onOpenLinks={() => setIsLinksOpen(true)}
-          />} />
+          <Route path="*" element={<LugPage mode="home" {...lugPageProps} />} />
         </Routes>
       </main>
 
-      <SiteFooter
-        onOpenRecruit={() => setIsRecruitOpen(true)}
-        onOpenHonors={() => setIsHonorsOpen(true)}
-        onOpenCalendar={() => setIsCalendarOpen(true)}
-        onOpenLinks={() => setIsLinksOpen(true)}
-      />
+      {!isLugPage && (
+        <SiteFooter
+          onOpenRecruit={() => setIsRecruitOpen(true)}
+          onOpenHonors={() => setIsHonorsOpen(true)}
+          onOpenCalendar={() => setIsCalendarOpen(true)}
+          onOpenLinks={() => setIsLinksOpen(true)}
+        />
+      )}
 
-      <img className="lug-watermark" src="/logo.png" alt="" aria-hidden="true" />
+      {!isLugPage && <img className="lug-watermark" src="/logo.png" alt="" aria-hidden="true" />}
 
       <AuthModal
         isOpen={isAuthModalOpen}

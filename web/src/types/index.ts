@@ -49,11 +49,13 @@ export interface PagedResult<T> {
   items: T[]
 }
 
+export type ArticleCategory = 'news' | 'notice' | 'senior' | 'contest'
+
 export interface Article {
   id: number
   title: string
   slug?: string
-  category: 'news' | 'notice' | 'senior' | 'contest'
+  category: ArticleCategory
   summary: string
   content: string
   is_pinned: boolean

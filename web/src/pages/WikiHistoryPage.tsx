@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { fetchWikiPage, fetchWikiRevisions, revertWikiPage } from '../api/client'
+import { WikiTree } from '../components/WikiTree'
 import { formatDateTime } from '../lib/format'
 import { canWrite } from '../lib/permissions'
 import type { User, WikiRevision } from '../types'
@@ -58,62 +59,78 @@ export function WikiHistoryPage({ user }: WikiHistoryPageProps) {
   }
 
   return (
-    <div className="py-8">
-      <div className="border-b border-[#e5e7eb] pb-3 mb-5">
-        <h1 className="text-2xl font-bold text-gray-800">修订历史</h1>
-        {pageTitle && <p className="text-[13px] text-gray-500 mt-1">{pageTitle}</p>}
-      </div>
+    <div id="main" role="main" className="lug-single-main">
+      <WikiTree currentId={id ? Number(id) : undefined} canCreate={canWrite(user)} />
 
-      {loading ? (
-        <div className="py-14 text-center text-gray-400 text-sm">正在加载修订历史...</div>
-      ) : error ? (
-        <div className="py-14 text-center text-gray-400 text-sm">{error}</div>
-      ) : revisions.length === 0 ? (
-        <div className="py-14 text-center text-gray-400 text-sm">暂无修订记录</div>
-      ) : (
-        <ul className="list-none">
-          {revisions.map((rev) => (
-            <li
-              key={rev.id}
-              className="py-3 border-b border-[#e5e7eb] flex flex-wrap items-center justify-between gap-2"
-            >
-              <div className="text-sm">
-                <span className="font-mono text-gray-400 mr-3">r{rev.id}</span>
-                <span className="text-gray-800 font-medium">{rev.title}</span>
-                <span className="text-[12.5px] text-gray-500 ml-3">
-                  {formatDateTime(rev.created_at)} · {rev.editor}
-                </span>
+      <article className="page h-entry">
+        <div className="page__inner-wrap">
+          <header className="lug-page-header">
+            <div className="lug-page-header__row">
+              <div>
+                <div className="lug-page-kicker">版本控制 · 修订留痕</div>
+                <h1 className="page__title">
+                  {pageTitle ? `修订历史：${pageTitle}` : '修订历史'}
+                </h1>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => navigate(`/wiki/${rev.page_id}/revisions/${rev.id}`)}
-                  className="text-[12.5px] px-3 py-0.5 border border-gray-200 rounded bg-gray-50 text-gray-700 hover:border-[#0f766e] hover:text-[#0f766e] transition-colors cursor-pointer"
-                >
-                  查看
-                </button>
-                {canWrite(user) && (
-                  <button
-                    onClick={() => handleRevert(rev.id)}
-                    disabled={revertingId !== null}
-                    className="text-[12.5px] px-3 py-0.5 border border-gray-200 rounded bg-gray-50 text-gray-700 hover:border-red-500 hover:text-red-500 transition-colors cursor-pointer disabled:opacity-50"
+              {id && (
+                <div className="lug-page-actions">
+                  <Link to={`/wiki/${id}`} className="lug-btn">
+                    ← 返回词条正文
+                  </Link>
+                </div>
+              )}
+            </div>
+          </header>
+
+          <section className="page__content">
+            {loading ? (
+              <div className="lug-state-box">正在加载修订历史...</div>
+            ) : error ? (
+              <div className="lug-state-box">{error}</div>
+            ) : revisions.length === 0 ? (
+              <div className="lug-state-box">暂无历史修订记录</div>
+            ) : (
+              <ul className="list-none m-0 p-0">
+                {revisions.map((rev, idx) => (
+                  <li
+                    key={rev.id}
+                    className="py-3.5 border-b border-[#e5e7eb] flex flex-wrap items-center justify-between gap-3"
                   >
-                    {revertingId === rev.id ? '回退中...' : '回退'}
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {id && (
-        <Link
-          to={`/wiki/${id}`}
-          className="inline-block mt-6 text-sm text-[#0f766e] hover:underline"
-        >
-          ← 返回 Wiki 页面
-        </Link>
-      )}
+                    <div className="text-sm">
+                      <span className="inline-block px-2 py-0.5 rounded bg-[#f3f6f6] border border-[#cfd4d3] font-mono text-xs text-[#187165] mr-2.5">
+                        r{rev.id}{idx === 0 ? ' · 最新' : ''}
+                      </span>
+                      <span className="font-semibold text-[#40514e]">{rev.title}</span>
+                      <span className="text-xs text-gray-500 ml-3">
+                        {formatDateTime(rev.created_at)} · 修订人：{rev.editor}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/wiki/${rev.page_id}/revisions/${rev.id}`)}
+                        className="lug-btn"
+                      >
+                        查看快照
+                      </button>
+                      {canWrite(user) && (
+                        <button
+                          type="button"
+                          onClick={() => handleRevert(rev.id)}
+                          disabled={revertingId !== null}
+                          className="lug-btn lug-btn--danger"
+                        >
+                          {revertingId === rev.id ? '回退中...' : '回退到此版'}
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      </article>
     </div>
   )
 }

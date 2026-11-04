@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
+import {
+  SvgGithubIcon,
+  SvgLoginIcon,
+  SvgNewsIcon,
+  SvgOjServerIcon,
+  SvgSurveyIcon,
+  SvgUserIcon,
+  SvgWikiStarIcon,
+} from '../components/LugIcons'
 import type { User } from '../types'
 
 interface SiteHeaderProps {
@@ -8,14 +17,11 @@ interface SiteHeaderProps {
   onLogout: () => void
 }
 
-const NAV_ITEMS = [
-  { label: 'Wiki', to: '/wiki', icon: 'fa-star' },
-  { label: 'News', to: '/news', icon: 'fa-newspaper' },
-] as const
-
 export function SiteHeader({ user, onOpenAuth, onLogout }: SiteHeaderProps) {
   const { pathname } = useLocation()
   const overlay = pathname === '/' || pathname === '/news'
+  const isWikiActive = pathname.startsWith('/wiki')
+  const isNewsActive = pathname.startsWith('/news') || pathname.startsWith('/article')
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `lug-menu__link${isActive ? ' is-active' : ''}`
@@ -30,14 +36,42 @@ export function SiteHeader({ user, onOpenAuth, onLogout }: SiteHeaderProps) {
           </Link>
 
           <ul className="lug-menu">
-            {NAV_ITEMS.map((item) => (
-              <li className="lug-menu__item" key={item.label}>
-                <NavLink to={item.to} className={linkClass}>
-                  <i className={`fad ${item.icon} fa-fw`} aria-hidden="true" />
-                  {item.label}
-                </NavLink>
-              </li>
-            ))}
+            {/* 登录注册项放在 Wiki 左侧 */}
+            <li className="lug-menu__item lug-menu__item--auth">
+              {user ? (
+                <UserMenu user={user} onLogout={onLogout} />
+              ) : (
+                <button
+                  type="button"
+                  className="lug-menu__link lug-menu__auth-btn"
+                  onClick={onOpenAuth}
+                >
+                  <SvgLoginIcon className="lug-nav-svg" />
+                  <span>登录 / 注册</span>
+                </button>
+              )}
+            </li>
+
+            <li className="lug-menu__item">
+              <NavLink
+                to="/wiki"
+                className={() => `lug-menu__link${isWikiActive ? ' is-active' : ''}`}
+              >
+                <SvgWikiStarIcon className="lug-nav-svg" />
+                <span>Wiki</span>
+              </NavLink>
+            </li>
+
+            <li className="lug-menu__item">
+              <NavLink
+                to="/news"
+                className={() => `lug-menu__link${isNewsActive ? ' is-active' : ''}`}
+              >
+                <SvgNewsIcon className="lug-nav-svg" />
+                <span>News</span>
+              </NavLink>
+            </li>
+
             <li className="lug-menu__item">
               <a
                 className="lug-menu__link"
@@ -45,10 +79,11 @@ export function SiteHeader({ user, onOpenAuth, onLogout }: SiteHeaderProps) {
                 target="_blank"
                 rel="noreferrer"
               >
-                <i className="fab fa-github fa-fw" aria-hidden="true" />
-                Github
+                <SvgGithubIcon className="lug-nav-svg" />
+                <span>Github</span>
               </a>
             </li>
+
             <li className="lug-menu__item">
               <a
                 className="lug-menu__link"
@@ -56,44 +91,62 @@ export function SiteHeader({ user, onOpenAuth, onLogout }: SiteHeaderProps) {
                 target="_blank"
                 rel="noreferrer"
               >
-                <i className="fad fa-server fa-fw" aria-hidden="true" />
-                OJ
+                <SvgOjServerIcon className="lug-nav-svg" />
+                <span>OJ</span>
               </a>
             </li>
           </ul>
-
-          <div className="lug-user">
-            {user ? (
-              <UserMenu user={user} onLogout={onLogout} />
-            ) : (
-              <button
-                type="button"
-                className="lug-user__button"
-                onClick={onOpenAuth}
-                aria-label="登录或注册"
-                title="登录 / 注册"
-              >
-                <i className="fad fa-right-to-bracket fa-fw" aria-hidden="true" />
-              </button>
-            )}
-          </div>
         </nav>
       </div>
 
       <div className="lug-mobile-nav">
         <div className="lug-mobile-nav__inner">
-          {NAV_ITEMS.map((item) => (
-            <NavLink to={item.to} className={linkClass} key={item.label}>
-              <i className={`fad ${item.icon} fa-fw`} aria-hidden="true" />
-              {item.label}
-            </NavLink>
-          ))}
+          {user ? (
+            <button
+              type="button"
+              className="lug-mobile-nav__auth"
+              onClick={onLogout}
+              title="点击退出登录"
+            >
+              <SvgUserIcon className="lug-nav-svg--sm" />
+              <span>{user.nickname || user.username} (退出)</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="lug-mobile-nav__auth"
+              onClick={onOpenAuth}
+            >
+              <SvgLoginIcon className="lug-nav-svg--sm" />
+              <span>登录 / 注册</span>
+            </button>
+          )}
+          <NavLink to="/wiki" className={linkClass}>
+            <SvgWikiStarIcon className="lug-nav-svg--sm" />
+            <span>Wiki</span>
+          </NavLink>
+          <NavLink to="/news" className={linkClass}>
+            <SvgNewsIcon className="lug-nav-svg--sm" />
+            <span>News</span>
+          </NavLink>
           <a href="https://github.com/syuctacm" target="_blank" rel="noreferrer">
-            <i className="fab fa-github fa-fw" aria-hidden="true" /> Github
+            <SvgGithubIcon className="lug-nav-svg--sm" />
+            <span>Github</span>
           </a>
           <a href="https://oj.syuctacm.cn" target="_blank" rel="noreferrer">
-            <i className="fad fa-server fa-fw" aria-hidden="true" /> OJ
+            <SvgOjServerIcon className="lug-nav-svg--sm" />
+            <span>OJ</span>
           </a>
+          {user?.role === 'admin' && (
+            <>
+              <NavLink to="/admin/articles" className={linkClass}>
+                <span>文章管理</span>
+              </NavLink>
+              <NavLink to="/admin/surveys" className={linkClass}>
+                <span>问卷管理</span>
+              </NavLink>
+            </>
+          )}
         </div>
       </div>
     </header>
@@ -126,34 +179,48 @@ function UserMenu({ user, onLogout }: UserMenuProps) {
   }, [open])
 
   return (
-    <div ref={menuRef}>
+    <div className="lug-user" ref={menuRef}>
       <button
         type="button"
-        className="lug-user__button"
+        className="lug-menu__link lug-menu__auth-btn"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        <i
-          className={`fad ${user.role === 'admin' ? 'fa-user-shield' : 'fa-user'} fa-fw`}
-          aria-hidden="true"
-        />
+        <SvgUserIcon className="lug-nav-svg" />
+        <span>{user.nickname || user.username}</span>
       </button>
 
       {open && (
         <div className="lug-user__dropdown">
+          <div className="lug-user__meta">
+            <div className="lug-user__name">{user.nickname || user.username}</div>
+            <div className="lug-user__role">
+              @{user.username} · {user.role === 'admin' ? '管理员' : '正式成员'}
+            </div>
+          </div>
+          <div className="divider" />
+          <Link to="/wiki/new" onClick={() => setOpen(false)}>
+            <SvgWikiStarIcon className="lug-dropdown-svg" />
+            新建 Wiki 页面
+          </Link>
+          <Link to="/surveys" onClick={() => setOpen(false)}>
+            <SvgSurveyIcon className="lug-dropdown-svg" />
+            队内问卷系统
+          </Link>
           {user.role === 'admin' && (
             <>
+              <div className="divider" />
               <Link to="/admin/articles" onClick={() => setOpen(false)}>
-                <i className="fad fa-file-lines fa-fw" aria-hidden="true" />
-                文章管理
+                <SvgNewsIcon className="lug-dropdown-svg" />
+                文章管理后台
               </Link>
               <Link to="/admin/surveys" onClick={() => setOpen(false)}>
-                <i className="fad fa-clipboard-list fa-fw" aria-hidden="true" />
-                问卷管理
+                <SvgSurveyIcon className="lug-dropdown-svg" />
+                问卷管理后台
               </Link>
-              <div className="divider" />
             </>
           )}
+          <div className="divider" />
           <button
             type="button"
             onClick={() => {
@@ -161,7 +228,7 @@ function UserMenu({ user, onLogout }: UserMenuProps) {
               onLogout()
             }}
           >
-            <i className="fad fa-right-from-bracket fa-fw" aria-hidden="true" />
+            <SvgLoginIcon className="lug-dropdown-svg" />
             退出登录
           </button>
         </div>

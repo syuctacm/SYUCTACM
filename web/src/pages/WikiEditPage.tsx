@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { createWikiPage, fetchWikiPage, fetchWikiTree, updateWikiPage } from '../api/client'
+import { MarkdownContent } from '../components/MarkdownContent'
+import { WikiTree } from '../components/WikiTree'
 import { canWrite } from '../lib/permissions'
-import type { User } from '../types'
+import type { User, WikiTreeItem } from '../types'
 
 interface WikiEditPageProps {
   user: User | null
@@ -17,7 +19,8 @@ export function WikiEditPage({ user, authReady }: WikiEditPageProps) {
   const [title, setTitle] = useState('')
   const [groupName, setGroupName] = useState('')
   const [content, setContent] = useState('')
-  const [groupOptions, setGroupOptions] = useState<string[]>([])
+  const [treeItems, setTreeItems] = useState<WikiTreeItem[]>([])
+  const [previewMode, setPreviewMode] = useState(false)
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -46,7 +49,6 @@ export function WikiEditPage({ user, authReady }: WikiEditPageProps) {
     }
   }, [id, isNew])
 
-  // 现有分组名用于「分组」输入框的 datalist 自动补全
   useEffect(() => {
     if (!canWrite(user)) return
     let cancelled = false
@@ -54,10 +56,7 @@ export function WikiEditPage({ user, authReady }: WikiEditPageProps) {
       try {
         const res = await fetchWikiTree()
         if (!cancelled) {
-          const names = [...new Set((res.items ?? []).map((i) => i.group_name))]
-            .filter((g) => g !== '')
-            .sort()
-          setGroupOptions(names)
+          setTreeItems(res.items ?? [])
         }
       } catch {
         // 分组补全失败不影响编辑功能
@@ -68,15 +67,17 @@ export function WikiEditPage({ user, authReady }: WikiEditPageProps) {
     }
   }, [user])
 
-  // 认证未就绪前不判定守卫，避免误判跳转
   if (!authReady) {
     return <div className="py-20 text-center text-gray-400 text-sm">正在加载...</div>
   }
 
   if (!canWrite(user)) {
-    // 未登录与 guest 均无写权限，统一跳回 Wiki 列表
     return <Navigate to="/wiki" replace />
   }
+
+  const groupOptions = [...new Set(treeItems.map((i) => i.group_name))]
+    .filter((g) => g !== '')
+    .sort()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -105,89 +106,129 @@ export function WikiEditPage({ user, authReady }: WikiEditPageProps) {
     }
   }
 
-  if (loading) {
-    return <div className="py-20 text-center text-gray-400 text-sm">正在加载页面...</div>
-  }
-
   return (
-    <div className="py-8">
-      <div className="border-b border-[#e5e7eb] pb-3 mb-5">
-        <h1 className="text-2xl font-bold text-gray-800">{isNew ? '新建 Wiki 页面' : '编辑 Wiki 页面'}</h1>
-      </div>
+    <div id="main" role="main" className="lug-single-main">
+      <WikiTree
+        currentId={id ? Number(id) : undefined}
+        canCreate={canWrite(user)}
+        items={treeItems.length > 0 ? treeItems : undefined}
+      />
 
-      {error && (
-        <div className="mb-4 p-3 rounded bg-red-50 border border-red-200 text-red-600 text-xs">
-          {error}
-        </div>
-      )}
+      <article className="page h-entry">
+        <div className="page__inner-wrap">
+          <header className="lug-page-header">
+            <div className="lug-page-header__row">
+              <h1 className="page__title">{isNew ? '新建 Wiki 页面' : '编辑 Wiki 页面'}</h1>
+              <div className="lug-page-actions">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode((v) => !v)}
+                  className="lug-btn"
+                >
+                  {previewMode ? '返回编辑' : '预览 Markdown'}
+                </button>
+                <Link
+                  to={isNew ? '/wiki' : `/wiki/${id}`}
+                  className="lug-btn"
+                >
+                  取消
+                </Link>
+              </div>
+            </div>
+          </header>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="wiki-title" className="text-xs font-medium text-gray-600">
-            页面标题 *
-          </label>
-          <input
-            id="wiki-title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="请输入页面标题..."
-            required
-            className="px-3 py-2 rounded border border-gray-300 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#0f766e]"
-          />
-        </div>
+          <section className="page__content">
+            {loading ? (
+              <div className="lug-state-box">正在加载页面内容...</div>
+            ) : (
+              <>
+                {error && (
+                  <div className="mb-4 p-3 rounded bg-red-50 border border-red-200 text-red-600 text-xs">
+                    {error}
+                  </div>
+                )}
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="wiki-group" className="text-xs font-medium text-gray-600">
-            分组（可选）
-          </label>
-          <input
-            id="wiki-group"
-            type="text"
-            value={groupName}
-            onChange={(e) => setGroupName(e.target.value)}
-            placeholder="留空表示未分组"
-            list="wiki-group-options"
-            className="px-3 py-2 rounded border border-gray-300 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#0f766e]"
-          />
-          <datalist id="wiki-group-options">
-            {groupOptions.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
-        </div>
+                {previewMode ? (
+                  <div className="p-5 rounded border border-[#cfd4d3] bg-[#fafcfc]">
+                    <h2 style={{ marginTop: 0 }}>{title || '（未填写标题）'}</h2>
+                    <MarkdownContent content={content || '*暂无正文内容*'} />
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="lug-clean-form">
+                    <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="wiki-title" className="text-xs font-semibold text-gray-600">
+                          页面标题 *
+                        </label>
+                        <input
+                          id="wiki-title"
+                          type="text"
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                          placeholder="例如：图论最短路与生成树模板"
+                          required
+                          className="lug-input"
+                        />
+                      </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="wiki-content" className="text-xs font-medium text-gray-600">
-            正文内容 (支持 Markdown) *
-          </label>
-          <textarea
-            id="wiki-content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={16}
-            placeholder="在此输入 Markdown 正文内容..."
-            required
-            className="w-full px-3 py-2.5 rounded border border-gray-300 text-sm font-mono text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#0f766e] leading-relaxed"
-          />
-        </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="wiki-group" className="text-xs font-semibold text-gray-600">
+                          所属分组（如：关于 / 训练 / 算法 / 传承）
+                        </label>
+                        <input
+                          id="wiki-group"
+                          type="text"
+                          value={groupName}
+                          onChange={(e) => setGroupName(e.target.value)}
+                          placeholder="留空归入「其他文档」"
+                          list="wiki-group-options"
+                          className="lug-input"
+                        />
+                        <datalist id="wiki-group-options">
+                          {groupOptions.map((name) => (
+                            <option key={name} value={name} />
+                          ))}
+                        </datalist>
+                      </div>
+                    </div>
 
-        <div className="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-1.5 rounded bg-[#0f766e] hover:bg-[#0d5f59] text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-50"
-          >
-            {saving ? '正在保存...' : '保存'}
-          </button>
-          <Link
-            to={isNew ? '/wiki' : `/wiki/${id}`}
-            className="px-4 py-1.5 rounded border border-gray-300 text-xs text-gray-600 hover:border-gray-400 hover:no-underline"
-          >
-            取消
-          </Link>
+                    <div className="flex flex-col gap-1.5 mt-4">
+                      <label htmlFor="wiki-content" className="text-xs font-semibold text-gray-600">
+                        正文内容（支持标准 Markdown，二级/三级标题自动生成右侧目录） *
+                      </label>
+                      <textarea
+                        id="wiki-content"
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        rows={18}
+                        placeholder="使用 ## 小节标题 编写结构化知识文档..."
+                        required
+                        className="lug-textarea font-mono"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-3 mt-5">
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="lug-btn lug-btn--primary"
+                      >
+                        {saving ? '正在保存...' : '保存并发布修订'}
+                      </button>
+                      <Link
+                        to={isNew ? '/wiki' : `/wiki/${id}`}
+                        className="lug-btn"
+                      >
+                        取消返回
+                      </Link>
+                    </div>
+                  </form>
+                )}
+              </>
+            )}
+          </section>
         </div>
-      </form>
+      </article>
     </div>
   )
 }

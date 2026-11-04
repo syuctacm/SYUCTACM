@@ -130,4 +130,109 @@ func seedInitialData(db *gorm.DB) {
 		}
 		log.Println("[Database] Initial articles seeded successfully.")
 	}
+
+	// 3. Seed Initial Wiki Knowledge Base
+	var wikiCount int64
+	db.Model(&model.WikiPage{}).Count(&wikiCount)
+	if wikiCount == 0 {
+		wikiPages := []model.WikiPage{
+			{
+				Title:         "关于我们",
+				GroupName:     "关于",
+				CreatedBy:     "system",
+				UpdatedBy:     "system",
+				RevisionCount: 1,
+				Content: "# 沈阳化工大学 ACM-ICPC 集训队\n\n" +
+					"沈阳化工大学 ACM-ICPC 集训队（ACM @ SYUCT）是由全校程序设计与算法竞赛爱好者自发组织、" +
+					"计算机科学与技术学院指导教师团队统筹指导的学术型竞技社团。\n\n" +
+					"## 我们做什么\n\n" +
+					"- 组织新生算法入门培训与校内选拔赛；\n" +
+					"- 开展每周例行训练、模拟赛与赛后讲评；\n" +
+					"- 选拔并训练队员参加 ICPC、CCPC、辽宁省赛、蓝桥杯和天梯赛；\n" +
+					"- 维护校内 Hydro OJ、题目标签榜和集训队知识库。\n\n" +
+					"## 我们的目标\n\n" +
+					"让每一位愿意投入时间与热情的同学，都能在算法、代码与团队协作上获得扎实成长。",
+			},
+			{
+				Title:         "集训队服务与训练平台",
+				GroupName:     "服务",
+				CreatedBy:     "system",
+				UpdatedBy:     "system",
+				RevisionCount: 1,
+				Content: "# 集训队服务与训练平台\n\n" +
+					"## Hydro OJ 校内评测\n\n" +
+					"校内核心评测平台：https://oj.syuctacm.cn \n\n" +
+					"日常训练、新生选拔、专题题单和个人训练热力图都在这里完成。\n\n" +
+					"## 题目标签榜\n\n" +
+					"标准化的题库算法标签分类，支持模拟、贪心、二分、动态规划、图论、数论与数据结构等专题检索。\n\n" +
+					"## GitHub 组织\n\n" +
+					"组织地址：https://github.com/syuctacm ，用于沉淀网站、工具与历届资料。",
+			},
+			{
+				Title:         "日常训练与赛事日历",
+				GroupName:     "训练",
+				CreatedBy:     "system",
+				UpdatedBy:     "system",
+				RevisionCount: 1,
+				Content: "# 日常训练与赛事日历\n\n" +
+					"## 每周例行训练\n\n" +
+					"- 周末：5 小时全真模拟赛或 Codeforces / AtCoder 线上合练；\n" +
+					"- 赛后：高年级队员拆解核心题型、代码实现与常见坑点；\n" +
+					"- 周中：专题题单与个人补题。\n\n" +
+					"## 秋季新生选拔\n\n" +
+					"每年秋季面向全校大一、大二开放，从 C/C++ 基础语法、STL 容器到基础算法思维逐步推进。\n\n" +
+					"## 主要赛事\n\n" +
+					"ICPC 国际大学生程序设计竞赛、CCPC 中国大学生程序设计竞赛、辽宁省大学生程序设计竞赛、蓝桥杯与天梯赛。",
+			},
+			{
+				Title:         "薪火相传与竞赛路线",
+				GroupName:     "传承",
+				CreatedBy:     "system",
+				UpdatedBy:     "system",
+				RevisionCount: 1,
+				Content: "# 薪火相传与竞赛路线\n\n" +
+					"## 入门阶段\n\n" +
+					"C/C++ 语法 → 复杂度分析 → 枚举与模拟 → 排序、二分与贪心。\n\n" +
+					"## 进阶阶段\n\n" +
+					"搜索 → 动态规划 → 图论 → 数论 → 数据结构与综合专题。\n\n" +
+					"## 学长经验\n\n" +
+					"历届队员的学习路线、竞赛复盘与生涯规划总结会持续整理到本知识库，欢迎后续成员继续补充。",
+			},
+			{
+				Title:         "常见问题与修订指南",
+				GroupName:     "指南",
+				CreatedBy:     "system",
+				UpdatedBy:     "system",
+				RevisionCount: 1,
+				Content: "# 常见问题与修订指南\n\n" +
+					"## 如何加入集训队？\n\n" +
+					"关注秋季招新通知，注册账号并完成 Hydro OJ 新生题单，参加统一上机选拔。\n\n" +
+					"## 如何编辑 Wiki？\n\n" +
+					"登录后即可创建或编辑页面；所有修改都会生成修订快照，可在历史记录中查看和回退。\n\n" +
+					"## 如何联系我们？\n\n" +
+					"官方邮箱：noreply@mail.syuctacm.cn 。",
+			},
+		}
+
+		for i := range wikiPages {
+			page := &wikiPages[i]
+			err := db.Transaction(func(tx *gorm.DB) error {
+				if err := tx.Create(page).Error; err != nil {
+					return err
+				}
+				return tx.Create(&model.WikiRevision{
+					PageID:  page.ID,
+					Title:   page.Title,
+					Content: page.Content,
+					Editor:  "system",
+				}).Error
+			})
+			if err != nil {
+				log.Printf("[Database] Failed to seed wiki page %q: %v", page.Title, err)
+			}
+		}
+		if len(wikiPages) > 0 {
+			log.Println("[Database] Initial wiki pages seeded successfully.")
+		}
+	}
 }

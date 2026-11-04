@@ -1,23 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchWeather } from '../api/client'
+import {
+  SvgBookTileIcon,
+  SvgCommentsTileIcon,
+  SvgWeatherSunCloudIcon,
+} from '../components/LugIcons'
 
-const COPYRIGHT_YEAR = new Date().getFullYear()
 const FALLBACK_WEATHER = '当前天气：沈阳铁西 16.5°C 多云'
+const COPYRIGHT_YEAR = new Date().getFullYear()
 
-interface SiteFooterProps {
-  onOpenRecruit: () => void
-  onOpenHonors: () => void
-  onOpenCalendar: () => void
-  onOpenLinks: () => void
-}
-
-export function SiteFooter({
-  onOpenRecruit,
-  onOpenHonors,
-  onOpenCalendar,
-  onOpenLinks,
-}: SiteFooterProps) {
+export function SiteFooter() {
   const [weatherText, setWeatherText] = useState(FALLBACK_WEATHER)
 
   useEffect(() => {
@@ -43,8 +36,8 @@ export function SiteFooter({
             竞赛训练与技术交流的平台，代表学校参加 ICPC、CCPC 及各类程序设计竞赛。
           </p>
           <p className="weather">
-            {weatherText}
-            <i className="fas fa-cloud-sun fa-fw" aria-hidden="true" style={{ marginLeft: 4 }} />
+            <span>{weatherText}</span>
+            <SvgWeatherSunCloudIcon className="lug-inline-svg" />
           </p>
         </div>
 
@@ -52,44 +45,14 @@ export function SiteFooter({
           <ul className="lug-footer__links">
             <li>
               <Link to="/wiki">
-                <i className="fad fa-address-card fa-fw" aria-hidden="true" />
+                <SvgBookTileIcon className="lug-footer-svg" />
                 关于我们
               </Link>
             </li>
             <li>
               <a href="mailto:noreply@mail.syuctacm.cn">
-                <i className="fas fa-phone-alt fa-fw" aria-hidden="true" />
+                <SvgCommentsTileIcon className="lug-footer-svg" />
                 联系我们
-              </a>
-            </li>
-            <li>
-              <button type="button" className="lug-footer__link-button" onClick={onOpenRecruit}>
-                <i className="fad fa-user-plus fa-fw" aria-hidden="true" />
-                加入我们
-              </button>
-            </li>
-            <li>
-              <button type="button" className="lug-footer__link-button" onClick={onOpenCalendar}>
-                <i className="fad fa-calendar-alt fa-fw" aria-hidden="true" />
-                活动日历
-              </button>
-            </li>
-            <li>
-              <button type="button" className="lug-footer__link-button" onClick={onOpenHonors}>
-                <i className="fad fa-trophy fa-fw" aria-hidden="true" />
-                荣誉殿堂
-              </button>
-            </li>
-            <li>
-              <button type="button" className="lug-footer__link-button" onClick={onOpenLinks}>
-                <i className="fad fa-link fa-fw" aria-hidden="true" />
-                友情链接
-              </button>
-            </li>
-            <li>
-              <a href="https://github.com/syuctacm" target="_blank" rel="noreferrer">
-                <i className="fab fa-github fa-fw" aria-hidden="true" />
-                GitHub 组织
               </a>
             </li>
           </ul>

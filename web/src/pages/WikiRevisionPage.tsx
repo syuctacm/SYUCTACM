@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchWikiRevision } from '../api/client'
 import { MarkdownContent } from '../components/MarkdownContent'
+import { WikiTree } from '../components/WikiTree'
 import { formatDateTime } from '../lib/format'
 import type { WikiRevisionDetail } from '../types'
 
@@ -33,46 +34,49 @@ export function WikiRevisionPage() {
     }
   }, [id, rid])
 
-  if (loading) {
-    return <div className="py-20 text-center text-gray-400 text-sm">正在加载该版本...</div>
-  }
-
-  if (error || !revision) {
-    return (
-      <div className="py-20 text-center">
-        <p className="text-gray-500 text-sm mb-4">{error || '该版本不存在'}</p>
-        <Link to={`/wiki/${id}/history`} className="text-[#0f766e] hover:underline text-sm">
-          ← 返回修订历史
-        </Link>
-      </div>
-    )
-  }
-
   return (
-    <div className="py-8">
-      <div className="border-b border-[#e5e7eb] pb-3 mb-5">
-        <h1 className="text-2xl leading-[1.4] font-bold text-gray-800">{revision.title}</h1>
-        <div className="text-[13px] text-gray-500 mt-1.5">
-          <span className="font-mono">r{revision.id}</span>
-          <span className="before:content-[' · ']">{formatDateTime(revision.created_at)}</span>
-          <span className="before:content-[' · ']">{revision.editor}</span>
-          <span className="before:content-[' · '] text-gray-400">历史只读版本</span>
+    <div id="main" role="main" className="lug-single-main">
+      <WikiTree currentId={id ? Number(id) : undefined} canCreate={false} />
+
+      <article className="page h-entry">
+        <div className="page__inner-wrap">
+          {loading ? (
+            <div className="lug-state-box">正在加载历史版本...</div>
+          ) : error || !revision ? (
+            <div className="lug-state-box">
+              <p>{error || '该版本不存在'}</p>
+              <p style={{ marginTop: '0.75rem' }}>
+                <Link to={`/wiki/${id}/history`}>← 返回修订历史</Link>
+              </p>
+            </div>
+          ) : (
+            <>
+              <header className="lug-page-header">
+                <div className="lug-page-header__row">
+                  <div>
+                    <div className="lug-page-kicker">
+                      历史只读快照 · r{revision.id} · {formatDateTime(revision.created_at)} · 修订人：{revision.editor}
+                    </div>
+                    <h1 className="page__title">{revision.title}</h1>
+                  </div>
+                  <div className="lug-page-actions">
+                    <Link to={`/wiki/${revision.page_id}/history`} className="lug-btn">
+                      ← 返回修订历史
+                    </Link>
+                    <Link to={`/wiki/${revision.page_id}`} className="lug-btn lug-btn--primary">
+                      查看当前最新版本 →
+                    </Link>
+                  </div>
+                </div>
+              </header>
+
+              <section className="page__content e-content">
+                <MarkdownContent content={revision.content} />
+              </section>
+            </>
+          )}
         </div>
-      </div>
-
-      <MarkdownContent content={revision.content} />
-
-      <div className="mt-6 flex gap-5">
-        <Link
-          to={`/wiki/${revision.page_id}/history`}
-          className="text-sm text-[#0f766e] hover:underline"
-        >
-          ← 返回修订历史
-        </Link>
-        <Link to={`/wiki/${revision.page_id}`} className="text-sm text-[#0f766e] hover:underline">
-          查看当前版本 →
-        </Link>
-      </div>
+      </article>
     </div>
   )
 }

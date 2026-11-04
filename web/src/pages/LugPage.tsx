@@ -1,159 +1,44 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { Link } from 'react-router-dom'
-import { fetchWeather } from '../api/client'
-import type { User } from '../types'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { fetchArticles, fetchWeather } from '../api/client'
+import {
+  SvgBookTileIcon,
+  SvgCalendarTileIcon,
+  SvgClipboardTileIcon,
+  SvgCommentsTileIcon,
+  SvgLinksTileIcon,
+  SvgTagsTileIcon,
+  SvgTerminalTileIcon,
+  SvgTrophyTileIcon,
+  SvgWeatherSunCloudIcon,
+} from '../components/LugIcons'
+import { CATEGORY_FILTERS, CATEGORY_LABELS } from '../lib/categories'
+import { formatChineseDate, formatDate } from '../lib/format'
+import type { Article, ArticleCategory } from '../types'
 
 type LugPageMode = 'home' | 'news'
 
 interface LugPageProps {
   mode: LugPageMode
-  user: User | null
-  onOpenAuth: () => void
-  onLogout: () => void
 }
 
 const FALLBACK_WEATHER = '当前天气：沈阳铁西 16.5°C 多云'
+const NEWS_PAGE_SIZE = 10
 
-const BASE_STYLE = `
-:host { display:block; width:100%; }
-.lug-shadow-body {
-  display:flex;
-  min-height:100vh;
-  flex-direction:column;
-  margin:0;
-  padding:0;
-  background:#fff !important;
-  color:#40514e;
-  font-family:-apple-system,BlinkMacSystemFont,"Noto Sans","Open Sans",Roboto,"Segoe UI","Helvetica Neue","Lucida Grande","Microsoft YaHei",Arial,sans-serif;
-  font-size:16px;
-  line-height:1.5;
-  -moz-osx-font-smoothing:grayscale;
-  -webkit-font-smoothing:antialiased;
-  text-rendering:optimizeLegibility;
-}
-.lug-shadow-body *, .lug-shadow-body *::before, .lug-shadow-body *::after { box-sizing:border-box; }
-.lug-shadow-body .initial-content { flex:1 0 auto; }
-.lug-shadow-body .site-logo img { width:28px; height:28px; object-fit:contain; }
-.lug-shadow-body.layout--splash .masthead {
-  position:absolute; top:0; left:0; right:0; z-index:20;
-  height:auto; background:transparent !important;
-}
-.lug-shadow-body.layout--splash .masthead__inner-wrap { position:relative; }
-.lug-shadow-body.layout--splash .masthead,
-.lug-shadow-body.layout--splash .masthead .greedy-nav a,
-.lug-shadow-body.layout--splash .masthead .site-title,
-.lug-shadow-body.layout--splash .visible-links a,
-.lug-shadow-body.layout--splash .search__toggle { color:#fff !important; }
-.lug-shadow-body .site-logo img { width:28px; height:28px; object-fit:contain; }
-.lug-shadow-body .lug-user-wrap { position:relative; margin-left:12px; }
-.lug-shadow-body .lug-user-wrap .search__toggle { position:relative; padding:0; border:0; background:transparent; color:inherit; cursor:pointer; }
-.lug-shadow-body #footer .footer__logo { margin-left:auto; }
-.lug-shadow-body .lug-nav--intro-only {
-  display:block; max-width:900px; margin:1rem auto 0;
-}
-.lug-shadow-body .lug-nav--intro-only .nav-right {
-  margin-left:0; background:#f3f6f6; border-radius:6px;
-}
-.lug-shadow-body .lug-nav--intro-only .description {
-  display:block; margin:0; padding:1em 1.25em;
-}
-.lug-shadow-body .lug-nav--intro-only .description p {
-  margin:0; font-size:.9em; line-height:1.65; text-align:left;
-}
-.lug-shadow-body .lug-nav--intro-only .description p + p { margin-top:.55em; }
-.lug-shadow-body .lug-nav--intro-only + .archive-group { margin-top:2rem; }
-.lug-shadow-body .lug-user-popover {
-  position:absolute; right:0; top:calc(100% + 10px); z-index:40;
-  min-width:170px; padding:6px 0; border:1px solid #cfd4d3; border-radius:4px;
-  background:#fff; color:#40514e; box-shadow:0 8px 24px rgba(0,0,0,.16);
-}
-.lug-shadow-body .lug-user-popover a, .lug-shadow-body .lug-user-popover button {
-  display:flex; width:100%; align-items:center; gap:8px; padding:7px 12px;
-  border:0; background:transparent; color:#40514e; font:inherit; font-size:13px;
-  text-align:left; cursor:pointer;
-}
-.lug-shadow-body .lug-user-popover a:hover, .lug-shadow-body .lug-user-popover button:hover { background:#f3f6f6; color:#11999e; text-decoration:none; }
-.lug-shadow-body .lug-user-popover .divider { height:1px; margin:5px 0; background:#e5e7eb; }
-.lug-shadow-body .footer__logo img.lug-footer-logo { opacity:.95; }
-.lug-shadow-body .lug-watermark {
-  position:fixed; left:-150px; bottom:-150px; z-index:-1; width:430px; height:430px;
-  object-fit:contain; opacity:.055; pointer-events:none; filter:grayscale(1);
-}
-.lug-shadow-body .lug-mobile-links { display:none; }
-@media (max-width: 48em) {
-  .lug-shadow-body { font-size:14px; }
-  .lug-shadow-body.layout--splash .masthead {
-    position:relative; background:#f3f6f6 !important; color:#40514e;
-  }
-  .lug-shadow-body.layout--splash .masthead,
-  .lug-shadow-body.layout--splash .masthead .greedy-nav a,
-  .lug-shadow-body.layout--splash .masthead .site-title,
-  .lug-shadow-body.layout--splash .search__toggle { color:#40514e !important; }
-  .lug-shadow-body .visible-links { display:none; }
-  .lug-shadow-body .lug-nav--intro-only { margin-top:.75rem; }
-  .lug-shadow-body .lug-user-wrap {
-    position:absolute; top:14px; right:16px; margin:0;
-  }
-  .lug-shadow-body .lug-user-wrap .search__toggle { color:#40514e !important; }
-  .lug-shadow-body .lug-mobile-links {
-    position:static; display:flex; flex-wrap:wrap; justify-content:center; gap:18px;
-    padding:8px 16px; background:#f3f6f6; color:#40514e; font-size:14px;
-  }
-  .lug-shadow-body .lug-mobile-links a { color:#40514e; }
-  .lug-shadow-body .page__hero--overlay { padding-top:3em; }
-}
-@media (min-width: 64em) {
-  .lug-shadow-body { font-size:18px; }
-}
-`
+export function LugPage({ mode }: LugPageProps) {
+  const isHome = mode === 'home'
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeCategory = (searchParams.get('category') || '') as ArticleCategory | ''
+  const searchQuery = searchParams.get('q') || ''
+  const [page, setPage] = useState(1)
 
-function appendStyles(root: ShadowRoot) {
-  if (!root.querySelector('link[data-syuctacm-lug-css]')) {
-    const lug = document.createElement('link')
-    lug.rel = 'stylesheet'
-    lug.href = '/lug/ustc-main.css'
-    lug.dataset.syuctacmLugCss = 'true'
-    root.appendChild(lug)
-  }
-  if (!root.querySelector('link[data-syuctacm-fa-css]')) {
-    const fa = document.createElement('link')
-    fa.rel = 'stylesheet'
-    fa.href = '/fontawesome/css/all.min.css'
-    fa.dataset.syuctacmFaCss = 'true'
-    root.appendChild(fa)
-  }
-
-  // Keep local overrides after the upstream LUG stylesheet so responsive and
-  // mobile-only rules cannot be overridden by the imported theme.
-  const oldStyle = root.querySelector('style[data-syuctacm-lug-base]')
-  if (oldStyle) oldStyle.remove()
-  const style = document.createElement('style')
-  style.dataset.syuctacmLugBase = 'true'
-  style.textContent = BASE_STYLE
-  root.appendChild(style)
-}
-
-export function LugPage({
-  mode,
-  user,
-  onOpenAuth,
-  onLogout,
-}: LugPageProps) {
-  const hostRef = useRef<HTMLDivElement | null>(null)
-  const [shadowRoot, setShadowRoot] = useState<ShadowRoot | null>(null)
+  const [articles, setArticles] = useState<Article[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(true)
   const [weatherText, setWeatherText] = useState(FALLBACK_WEATHER)
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
-
-  const attachShadow = useCallback((node: HTMLDivElement | null) => {
-    hostRef.current = node
-    if (!node) return
-    const root = node.shadowRoot ?? node.attachShadow({ mode: 'open' })
-    appendStyles(root)
-    setShadowRoot(root)
-  }, [])
 
   useEffect(() => {
+    if (!isHome) return
     let cancelled = false
     fetchWeather()
       .then((w) => {
@@ -165,255 +50,294 @@ export function LugPage({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [isHome])
 
-  if (!shadowRoot) {
-    return <div ref={attachShadow} className="lug-shadow-host" />
+  useEffect(() => {
+    let cancelled = false
+    fetchArticles({
+      category: !isHome && activeCategory ? activeCategory : undefined,
+      search: !isHome && searchQuery ? searchQuery : undefined,
+      page: isHome ? 1 : page,
+      page_size: isHome ? 5 : NEWS_PAGE_SIZE,
+    })
+      .then((res) => {
+        if (!cancelled) {
+          setArticles(res.items ?? [])
+          setTotal(res.total ?? 0)
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isHome, activeCategory, page, searchQuery])
+
+  const totalPages = Math.max(1, Math.ceil(total / NEWS_PAGE_SIZE))
+
+  const handleCategoryChange = (cat: ArticleCategory | '') => {
+    setLoading(true)
+    setPage(1)
+    if (cat === '') {
+      setSearchParams({})
+    } else {
+      setSearchParams({ category: cat })
+    }
+  }
+
+  const handlePageChange = (nextPage: number) => {
+    setLoading(true)
+    setPage(nextPage)
+  }
+
+  const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const value = String(new FormData(event.currentTarget).get('q') || '').trim()
+    const next = new URLSearchParams(searchParams)
+    if (value) next.set('q', value)
+    else next.delete('q')
+    setLoading(true)
+    setPage(1)
+    setSearchParams(next)
   }
 
   return (
-    <div ref={attachShadow} className="lug-shadow-host">
-      {createPortal(
-        <LugDocument
-          mode={mode}
-          user={user}
-          weatherText={weatherText}
-          userMenuOpen={userMenuOpen}
-          onToggleUserMenu={() => setUserMenuOpen((v) => !v)}
-          onCloseUserMenu={() => setUserMenuOpen(false)}
-          onOpenAuth={onOpenAuth}
-          onLogout={onLogout}
-        />,
-        shadowRoot,
-      )}
-    </div>
-  )
-}
-
-interface LugDocumentProps {
-  mode: LugPageMode
-  user: User | null
-  weatherText: string
-  userMenuOpen: boolean
-  onToggleUserMenu: () => void
-  onCloseUserMenu: () => void
-  onOpenAuth: () => void
-  onLogout: () => void
-}
-
-function LugDocument({
-  mode,
-  user,
-  weatherText,
-  userMenuOpen,
-  onToggleUserMenu,
-  onCloseUserMenu,
-  onOpenAuth,
-  onLogout,
-}: LugDocumentProps) {
-  const isHome = mode === 'home'
-
-  return (
-    <div className="layout--splash lug-shadow-body">
-      <div className="masthead">
-        <div className="masthead__inner-wrap">
-          <div className="masthead__menu">
-            <nav aria-label="Primary navigation" className="greedy-nav" id="site-nav">
-              <a className="site-logo" href="/">
-                <img alt="ACM @ SYUCT" src="/logo.png" />
-              </a>
-              <a className="site-title" href="/">
-                ACM @ SYUCT
-              </a>
-              <ul className="visible-links">
-                <li className="masthead__menu-item">
-                  <Link to="/wiki">
-                    <i className="fad fa-star fa-lg fa-fw" aria-hidden="true" />
-                    Wiki
-                  </Link>
-                </li>
-                <li className="masthead__menu-item">
-                  <Link to="/news">
-                    <i className="fad fa-newspaper fa-lg fa-fw" aria-hidden="true" />
-                    News
-                  </Link>
-                </li>
-                <li className="masthead__menu-item">
-                  <a href="https://github.com/syuctacm" target="_blank" rel="noreferrer">
-                    <i className="fab fa-github fa-lg fa-fw" aria-hidden="true" />
-                    Github
-                  </a>
-                </li>
-                <li className="masthead__menu-item">
-                  <a href="https://oj.syuctacm.cn" target="_blank" rel="noreferrer">
-                    <i className="fad fa-server fa-lg fa-fw" aria-hidden="true" />
-                    OJ
-                  </a>
-                </li>
-              </ul>
-              <div className="lug-user-wrap">
-                <button
-                  className="search__toggle"
-                  type="button"
-                  onClick={user ? onToggleUserMenu : onOpenAuth}
-                  aria-label={user ? '打开用户菜单' : '登录或注册'}
-                  aria-expanded={user ? userMenuOpen : undefined}
-                >
-                  <i className={`fad ${user ? 'fa-user' : 'fa-right-to-bracket'} fa-lg`} aria-hidden="true" />
-                </button>
-                {user && userMenuOpen && (
-                  <div className="lug-user-popover">
-                    {user.role === 'admin' && (
-                      <>
-                        <Link to="/admin/articles" onClick={onCloseUserMenu}>
-                          <i className="fad fa-file-lines fa-fw" aria-hidden="true" /> 文章管理
-                        </Link>
-                        <Link to="/admin/surveys" onClick={onCloseUserMenu}>
-                          <i className="fad fa-clipboard-list fa-fw" aria-hidden="true" /> 问卷管理
-                        </Link>
-                        <div className="divider" />
-                      </>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onCloseUserMenu()
-                        onLogout()
-                      }}
-                    >
-                      <i className="fad fa-right-from-bracket fa-fw" aria-hidden="true" /> 退出登录
-                    </button>
-                  </div>
-                )}
-              </div>
-            </nav>
-          </div>
-        </div>
-      </div>
-
-      <div className="lug-mobile-links">
-        <Link to="/wiki">Wiki</Link>
-        <Link to="/news">News</Link>
-        <a href="https://github.com/syuctacm" target="_blank" rel="noreferrer">Github</a>
-        <a href="https://oj.syuctacm.cn" target="_blank" rel="noreferrer">OJ</a>
-      </div>
-
-      <div className="initial-content">
-        <div
-          className="page__hero--overlay"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.25)), url('/lug/autumn-1.jpg')",
-          }}
-        >
-          <div className="wrapper">
-            <h1 className="page__title" id="page-title" itemProp="headline">
-              {isHome ? 'ACM @ SYUCT' : 'News'}
-            </h1>
-            <p className="page__lead">
-              {isHome
-                ? '沈阳化工大学 ACM-ICPC 集训队'
-                : '沈阳化工大学 ACM-ICPC 集训队新闻与动态'}
-            </p>
-            <p>
-              <Link className="btn btn--light-outline btn--large" to={isHome ? '/wiki' : '/'}>
-                {isHome ? '了解更多' : '返回首页'}
+    <div className="lug-splash-page">
+      <div
+        className="lug-hero"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.3)), url('/lug/autumn-1.jpg')",
+        }}
+      >
+        <div className="lug-hero__wrapper">
+          <h1 className="lug-hero__title" id="page-title" itemProp="headline">
+            {isHome ? 'ACM @ SYUCT' : 'ACM 新闻与动态'}
+          </h1>
+          <p className="lug-hero__lead">
+            {isHome
+              ? '沈阳化工大学 ACM-ICPC 集训队'
+              : '赛事喜报、集训通知、选拔安排与历届队员薪火相传总结'}
+          </p>
+          {isHome && (
+            <p className="lug-hero__actions">
+              <Link className="lug-hero__btn" to="/wiki">
+                了解更多
               </Link>
             </p>
-          </div>
-        </div>
-
-        <div id="main" role="main">
-          <article className="splash" itemScope itemType="https://schema.org/CreativeWork">
-            <section className="page__content" itemProp="text">
-              {isHome && (
-                <nav className="lug-nav lug-nav--intro-only" aria-label="集训队简介">
-                  <div className="nav-right">
-                    <div className="description">
-                      <p>
-                        沈阳化工大学 ACM-ICPC 集训队是由全校程序设计与算法竞赛爱好者自发组织、教练组统一指导的竞技团队，
-                        旨在联合全校计算机与数学爱好者，搭建思维与代码交流共享的平台，宣传算法之美，
-                        选拔培育代表学校出战 ICPC、CCPC 及各省高校程序设计大赛的优秀梯队。
-                      </p>
-                      <p style={{ marginTop: '0.5em' }}>
-                        {weatherText}
-                        <i className="fa-fw fas fa-cloud-sun" aria-hidden="true" />
-                      </p>
-                    </div>
-                  </div>
-                </nav>
-              )}
-
-              <div className="archive-group">
-                <div className="archive-group__item">
-                  <h3 className="archive__subtitle">
-                    <Link to="/news">{isHome ? '最新文章' : '文章列表'}</Link>
-                  </h3>
-                  <div className="list__item">
-                    <article className="archive__item" itemScope itemType="https://schema.org/CreativeWork">
-                      <h2 className="archive__item-title no_toc p-name" itemProp="headline">
-                        <Link className="u-url" to="/news" rel="permalink">
-                          ACM 集训队新生招新与训练安排
-                        </Link>
-                      </h2>
-                      <p className="page__meta">
-                        <span className="page__meta-date">
-                          <i aria-hidden="true" className="far fa-calendar-alt" />
-                          <time dateTime="2026-10-19">2026 年 10 月 19 日</time>
-                        </span>
-                      </p>
-                      <p className="archive__item-excerpt p-summary" itemProp="description">
-                        这是首页文章列表的示例内容，后续可由后台管理替换。
-                      </p>
-                    </article>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </article>
+          )}
         </div>
       </div>
 
-      <div className="page__footer" id="footer">
-        <footer>
-          <div className="footer-row">
-            <div className="footer-block footer__about">
-              <p>
-                沈阳化工大学 ACM-ICPC 集训队由全校程序设计与算法竞赛爱好者组成，致力于搭建算法学习、
-                竞赛训练与技术交流的平台，代表学校参加 ICPC、CCPC 及各类程序设计竞赛。
-              </p>
-              <p style={{ marginTop: '0.5em' }}>
-                {weatherText}
-                <i className="fa-fw fas fa-cloud-sun" aria-hidden="true" />
-              </p>
-            </div>
-            <div className="footer-block footer__extras">
-              <div className="footer__contact">
-                <ul>
-                  <li>
-                    <Link to="/wiki">
-                      <i className="fad fa-fw fa-address-card" aria-hidden="true" /> 关于我们
-                    </Link>
-                  </li>
-                  <li>
-                    <a href="mailto:noreply@mail.syuctacm.cn">
-                      <i className="fas fa-fw fa-phone-alt" aria-hidden="true" /> 联系我们
-                    </a>
-                  </li>
-                </ul>
-              </div>
-              <div className="footer__logo">
-                <div className="footer__logo-image">
-                  <img src="/logo.png" alt="ACM @ SYUCT" className="lug-footer-logo" />
-                </div>
-                <div className="footer__logo-text" />
+      <div className="lug-splash-main">
+        {isHome && (
+          <nav className="lug-service-hub" aria-label="集训队核心服务导航">
+            <div className="lug-service-hub__left">
+              <div className="lug-tile-grid">
+                <a
+                  className="lug-tile lug-tile--bg-red"
+                  href="https://oj.syuctacm.cn"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <SvgTerminalTileIcon className="lug-tile__svg" />
+                  <span>Hydro OJ</span>
+                </a>
+                <a
+                  className="lug-tile lug-tile--bg-green"
+                  href="https://oj.syuctacm.cn/p"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <SvgTagsTileIcon className="lug-tile__svg" />
+                  <span>题目标签榜</span>
+                </a>
+                <Link className="lug-tile lug-tile--bg-blue" to="/news?category=senior">
+                  <SvgBookTileIcon className="lug-tile__svg" />
+                  <span>薪火相传</span>
+                </Link>
+                <Link className="lug-tile lug-tile--bg-yellow" to="/news?category=contest">
+                  <SvgTrophyTileIcon className="lug-tile__svg" />
+                  <span>竞赛与选拔</span>
+                </Link>
               </div>
             </div>
-          </div>
-        </footer>
-      </div>
 
-      <img src="/logo.png" alt="" aria-hidden="true" className="lug-watermark" />
+            <div className="lug-service-hub__right">
+              <div className="lug-service-hub__desc">
+                <p>
+                  沈阳化工大学 ACM-ICPC 集训队是由全校程序设计与算法竞赛爱好者自发组织、教练组统一指导的竞技团队，
+                  旨在联合全校计算机与数学爱好者，搭建思维与代码交流共享的平台，宣传算法之美，
+                  选拔培育代表学校出战 ICPC、CCPC 及各省高校程序设计大赛的优秀梯队。
+                </p>
+                <p className="lug-service-hub__weather">
+                  <span>{weatherText}</span>
+                  <SvgWeatherSunCloudIcon className="lug-inline-svg" />
+                </p>
+              </div>
+
+              <div className="lug-tile-grid lug-tile-grid--right">
+                <Link className="lug-tile lug-tile--fg-red" to="/news?category=notice">
+                  <SvgCalendarTileIcon className="lug-tile__svg" />
+                  <span>活动日历</span>
+                </Link>
+                <a
+                  className="lug-tile lug-tile--fg-green"
+                  href="mailto:noreply@mail.syuctacm.cn"
+                >
+                  <SvgCommentsTileIcon className="lug-tile__svg" />
+                  <span>联系我们</span>
+                </a>
+                <Link className="lug-tile lug-tile--fg-blue" to="/surveys">
+                  <SvgClipboardTileIcon className="lug-tile__svg" />
+                  <span>问卷系统</span>
+                </Link>
+                <a
+                  className="lug-tile lug-tile--fg-yellow"
+                  href="https://github.com/syuctacm"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <SvgLinksTileIcon className="lug-tile__svg" />
+                  <span>友情链接</span>
+                </a>
+              </div>
+            </div>
+          </nav>
+        )}
+
+        <div className={isHome ? 'lug-archive-section' : 'lug-news-archive'}>
+          <div className="lug-archive-header">
+            <h3 className="lug-archive-subtitle">
+              {isHome ? <Link to="/news">最新文章</Link> : '文章归档'}
+            </h3>
+
+            {!isHome && (
+              <div className="lug-archive-controls">
+                <form className="lug-search-form" role="search" onSubmit={handleSearch}>
+                  <input
+                    key={searchQuery}
+                    name="q"
+                    type="search"
+                    defaultValue={searchQuery}
+                    placeholder="搜索文章标题"
+                    aria-label="搜索文章标题"
+                    className="lug-search-input"
+                  />
+                  <button type="submit" className="lug-search-btn">搜索</button>
+                </form>
+                <div className="lug-category-pills" role="tablist" aria-label="文章分类筛选">
+                  {CATEGORY_FILTERS.map((f) => {
+                    const active = activeCategory === f.value
+                    return (
+                      <button
+                        key={f.value || 'all'}
+                        type="button"
+                        onClick={() => handleCategoryChange(f.value)}
+                        className={`lug-category-pill${active ? ' is-active' : ''}`}
+                      >
+                        {f.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {loading ? (
+            <p className="lug-state-text">正在加载文章...</p>
+          ) : articles.length === 0 ? (
+            <p className="lug-state-text">暂无相关文章</p>
+          ) : (
+            <div className="lug-entries-list">
+              {articles.map((article) => (
+                <div className="lug-list-item" key={article.id}>
+                  <article
+                    className="lug-archive-item"
+                    itemScope
+                    itemType="https://schema.org/CreativeWork"
+                  >
+                    <h2 className="lug-archive-item__title" itemProp="headline">
+                      <Link to={`/article/${article.id}`} rel="permalink">
+                        {article.title}
+                      </Link>
+                      {article.is_pinned && <span className="lug-pin-badge">置顶</span>}
+                    </h2>
+                    <p className="lug-archive-item__meta">
+                      <span className="lug-archive-item__date">
+                        <SvgCalendarTileIcon className="lug-meta-svg" />
+                        <time dateTime={formatDate(article.created_at)}>
+                          {formatChineseDate(article.created_at)}
+                        </time>
+                      </span>
+                      <span className="lug-meta-sep">·</span>
+                      <span>{CATEGORY_LABELS[article.category] ?? article.category}</span>
+                      {article.author_name && (
+                        <>
+                          <span className="lug-meta-sep">·</span>
+                          <span>{article.author_name}</span>
+                        </>
+                      )}
+                    </p>
+                    <p className="lug-archive-item__excerpt" itemProp="description">
+                      {article.summary || article.content.slice(0, 140)}
+                    </p>
+                  </article>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {isHome && articles.length > 0 && (
+            <div className="lug-archive-more">
+              <Link to="/news" className="lug-btn">
+                查看全部历史文章 →
+              </Link>
+            </div>
+          )}
+
+          {!isHome && totalPages > 1 && (
+            <nav className="pagination" aria-label="Pagination">
+              <ul>
+                <li>
+                  <button
+                    type="button"
+                    disabled={page <= 1}
+                    onClick={() => handlePageChange(Math.max(1, page - 1))}
+                    className={page <= 1 ? 'disabled' : ''}
+                  >
+                    上一页
+                  </button>
+                </li>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                  <li key={n}>
+                    <button
+                      type="button"
+                      onClick={() => handlePageChange(n)}
+                      className={n === page ? 'current disabled' : ''}
+                    >
+                      {n}
+                    </button>
+                  </li>
+                ))}
+                <li>
+                  <button
+                    type="button"
+                    disabled={page >= totalPages}
+                    onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
+                    className={page >= totalPages ? 'disabled' : ''}
+                  >
+                    下一页
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

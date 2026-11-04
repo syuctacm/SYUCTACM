@@ -4,6 +4,12 @@ export function formatDate(dateStr: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+export function formatChineseDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  if (Number.isNaN(d.getTime())) return dateStr
+  return `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日`
+}
+
 export function formatDateTime(dateStr: string): string {
   const d = new Date(dateStr)
   if (Number.isNaN(d.getTime())) return dateStr

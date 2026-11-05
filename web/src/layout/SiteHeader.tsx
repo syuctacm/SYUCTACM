@@ -36,22 +36,6 @@ export function SiteHeader({ user, onOpenAuth, onLogout }: SiteHeaderProps) {
           </Link>
 
           <ul className="lug-menu">
-            {/* 登录注册项放在 Wiki 左侧 */}
-            <li className="lug-menu__item lug-menu__item--auth">
-              {user ? (
-                <UserMenu user={user} onLogout={onLogout} />
-              ) : (
-                <button
-                  type="button"
-                  className="lug-menu__link lug-menu__auth-btn"
-                  onClick={onOpenAuth}
-                >
-                  <SvgLoginIcon className="lug-nav-svg" />
-                  <span>登录 / 注册</span>
-                </button>
-              )}
-            </li>
-
             <li className="lug-menu__item">
               <NavLink
                 to="/wiki"
@@ -95,32 +79,25 @@ export function SiteHeader({ user, onOpenAuth, onLogout }: SiteHeaderProps) {
                 <span>OJ</span>
               </a>
             </li>
+            <li className="lug-menu__item lug-menu__item--auth">
+              {user ? (
+                <UserMenu user={user} onLogout={onLogout} />
+              ) : (
+                <button
+                  type="button"
+                  className="lug-menu__link lug-menu__auth-btn"
+                  onClick={onOpenAuth}
+                >
+                  <span>Login</span>
+                </button>
+              )}
+            </li>
           </ul>
         </nav>
       </div>
 
       <div className="lug-mobile-nav">
         <div className="lug-mobile-nav__inner">
-          {user ? (
-            <button
-              type="button"
-              className="lug-mobile-nav__auth"
-              onClick={onLogout}
-              title="点击退出登录"
-            >
-              <SvgUserIcon className="lug-nav-svg--sm" />
-              <span>{user.nickname || user.username} (退出)</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="lug-mobile-nav__auth"
-              onClick={onOpenAuth}
-            >
-              <SvgLoginIcon className="lug-nav-svg--sm" />
-              <span>登录 / 注册</span>
-            </button>
-          )}
           <NavLink to="/wiki" className={linkClass}>
             <SvgWikiStarIcon className="lug-nav-svg--sm" />
             <span>Wiki</span>
@@ -146,6 +123,21 @@ export function SiteHeader({ user, onOpenAuth, onLogout }: SiteHeaderProps) {
                 <span>问卷管理</span>
               </NavLink>
             </>
+          )}
+          {user ? (
+            <button
+              type="button"
+              className="lug-mobile-nav__auth"
+              onClick={onLogout}
+              title="点击退出登录"
+            >
+              <SvgUserIcon className="lug-nav-svg--sm" />
+              <span>{user.nickname || user.username} (退出)</span>
+            </button>
+          ) : (
+            <button type="button" className="lug-mobile-nav__auth" onClick={onOpenAuth}>
+              <span>Login</span>
+            </button>
           )}
         </div>
       </div>

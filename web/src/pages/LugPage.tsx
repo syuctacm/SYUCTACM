@@ -2,14 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { fetchArticles, fetchWeather } from '../api/client'
 import {
-  SvgBookTileIcon,
   SvgCalendarTileIcon,
-  SvgClipboardTileIcon,
-  SvgCommentsTileIcon,
-  SvgLinksTileIcon,
-  SvgTagsTileIcon,
-  SvgTerminalTileIcon,
-  SvgTrophyTileIcon,
   SvgWeatherSunCloudIcon,
 } from '../components/LugIcons'
 import { CATEGORY_FILTERS, CATEGORY_LABELS } from '../lib/categories'
@@ -34,7 +27,7 @@ export function LugPage({ mode }: LugPageProps) {
 
   const [articles, setArticles] = useState<Article[]>([])
   const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!isHome)
   const [weatherText, setWeatherText] = useState(FALLBACK_WEATHER)
 
   useEffect(() => {
@@ -53,12 +46,13 @@ export function LugPage({ mode }: LugPageProps) {
   }, [isHome])
 
   useEffect(() => {
+    if (isHome) return
     let cancelled = false
     fetchArticles({
-      category: !isHome && activeCategory ? activeCategory : undefined,
-      search: !isHome && searchQuery ? searchQuery : undefined,
-      page: isHome ? 1 : page,
-      page_size: isHome ? 5 : NEWS_PAGE_SIZE,
+      category: activeCategory ? activeCategory : undefined,
+      search: searchQuery ? searchQuery : undefined,
+      page,
+      page_size: NEWS_PAGE_SIZE,
     })
       .then((res) => {
         if (!cancelled) {
@@ -121,91 +115,22 @@ export function LugPage({ mode }: LugPageProps) {
               ? '沈阳化工大学 ACM-ICPC 集训队'
               : '赛事喜报、集训通知、选拔安排与历届队员薪火相传总结'}
           </p>
-          {isHome && (
-            <p className="lug-hero__actions">
-              <Link className="lug-hero__btn" to="/wiki">
-                了解更多
-              </Link>
-            </p>
-          )}
         </div>
       </div>
 
       <div className="lug-splash-main">
         {isHome && (
-          <nav className="lug-service-hub" aria-label="集训队核心服务导航">
-            <div className="lug-service-hub__left">
-              <div className="lug-tile-grid">
-                <a
-                  className="lug-tile lug-tile--bg-red"
-                  href="https://oj.syuctacm.cn"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <SvgTerminalTileIcon className="lug-tile__svg" />
-                  <span>Hydro OJ</span>
-                </a>
-                <a
-                  className="lug-tile lug-tile--bg-green"
-                  href="https://oj.syuctacm.cn/p"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <SvgTagsTileIcon className="lug-tile__svg" />
-                  <span>题目标签榜</span>
-                </a>
-                <Link className="lug-tile lug-tile--bg-blue" to="/news?category=senior">
-                  <SvgBookTileIcon className="lug-tile__svg" />
-                  <span>薪火相传</span>
-                </Link>
-                <Link className="lug-tile lug-tile--bg-yellow" to="/news?category=contest">
-                  <SvgTrophyTileIcon className="lug-tile__svg" />
-                  <span>竞赛与选拔</span>
-                </Link>
-              </div>
-            </div>
-
-            <div className="lug-service-hub__right">
-              <div className="lug-service-hub__desc">
-                <p>
-                  沈阳化工大学 ACM-ICPC 集训队是由全校程序设计与算法竞赛爱好者自发组织、教练组统一指导的竞技团队，
-                  旨在联合全校计算机与数学爱好者，搭建思维与代码交流共享的平台，宣传算法之美，
-                  选拔培育代表学校出战 ICPC、CCPC 及各省高校程序设计大赛的优秀梯队。
-                </p>
-                <p className="lug-service-hub__weather">
-                  <span>{weatherText}</span>
-                  <SvgWeatherSunCloudIcon className="lug-inline-svg" />
-                </p>
-              </div>
-
-              <div className="lug-tile-grid lug-tile-grid--right">
-                <Link className="lug-tile lug-tile--fg-red" to="/news?category=notice">
-                  <SvgCalendarTileIcon className="lug-tile__svg" />
-                  <span>活动日历</span>
-                </Link>
-                <a
-                  className="lug-tile lug-tile--fg-green"
-                  href="mailto:noreply@mail.syuctacm.cn"
-                >
-                  <SvgCommentsTileIcon className="lug-tile__svg" />
-                  <span>联系我们</span>
-                </a>
-                <Link className="lug-tile lug-tile--fg-blue" to="/surveys">
-                  <SvgClipboardTileIcon className="lug-tile__svg" />
-                  <span>问卷系统</span>
-                </Link>
-                <a
-                  className="lug-tile lug-tile--fg-yellow"
-                  href="https://github.com/syuctacm"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <SvgLinksTileIcon className="lug-tile__svg" />
-                  <span>友情链接</span>
-                </a>
-              </div>
-            </div>
-          </nav>
+          <section className="lug-intro-card" aria-label="集训队简介">
+            <p>
+              沈阳化工大学 ACM-ICPC 集训队是由全校程序设计与算法竞赛爱好者自发组织、教练组统一指导的竞技团队，
+              旨在联合全校计算机与数学爱好者，搭建思维与代码交流共享的平台，宣传算法之美，
+              选拔培育代表学校出战 ICPC、CCPC 及各省高校程序设计大赛的优秀梯队。
+            </p>
+            <p className="lug-intro-card__weather">
+              <span>{weatherText}</span>
+              <SvgWeatherSunCloudIcon className="lug-inline-svg" />
+            </p>
+          </section>
         )}
 
         <div className={isHome ? 'lug-archive-section' : 'lug-news-archive'}>
@@ -247,7 +172,34 @@ export function LugPage({ mode }: LugPageProps) {
             )}
           </div>
 
-          {loading ? (
+          {isHome ? (
+            <div className="lug-entries-list">
+              <div className="lug-list-item">
+                <article
+                  className="lug-archive-item"
+                  itemScope
+                  itemType="https://schema.org/CreativeWork"
+                >
+                  <h2 className="lug-archive-item__title" itemProp="headline">
+                    <Link to="/news" rel="permalink">
+                      ACM 集训队新生招新与训练安排
+                    </Link>
+                  </h2>
+                  <p className="lug-archive-item__meta">
+                    <span className="lug-archive-item__date">
+                      <SvgCalendarTileIcon className="lug-meta-svg" />
+                      <time dateTime="2026-10-19">2026 年 10 月 19 日</time>
+                    </span>
+                    <span className="lug-meta-sep">·</span>
+                    <span>示例文章</span>
+                  </p>
+                  <p className="lug-archive-item__excerpt" itemProp="description">
+                    这是首页文章列表的示例内容，后续可由后台管理替换。
+                  </p>
+                </article>
+              </div>
+            </div>
+          ) : loading ? (
             <p className="lug-state-text">正在加载文章...</p>
           ) : articles.length === 0 ? (
             <p className="lug-state-text">暂无相关文章</p>
@@ -288,14 +240,6 @@ export function LugPage({ mode }: LugPageProps) {
                   </article>
                 </div>
               ))}
-            </div>
-          )}
-
-          {isHome && articles.length > 0 && (
-            <div className="lug-archive-more">
-              <Link to="/news" className="lug-btn">
-                查看全部历史文章 →
-              </Link>
             </div>
           )}
 
